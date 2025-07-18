@@ -580,6 +580,21 @@ function App() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{client.cpf}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{client.phone}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{client.address.city}/{client.address.state}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                      <div className="flex items-center space-x-2">
+                        <span className="bg-orange-100 text-orange-800 px-2 py-1 text-xs font-medium rounded-full">
+                          {getProcessCount(client.id)} processos
+                        </span>
+                        {getProcessCount(client.id) > 0 && (
+                          <button
+                            onClick={() => fetchClientProcesses(client.id)}
+                            className="text-orange-400 hover:text-orange-300 text-xs"
+                          >
+                            Ver
+                          </button>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button className="text-orange-400 hover:text-orange-300 mr-3">Editar</button>
                       <button className="text-red-400 hover:text-red-300">Excluir</button>
