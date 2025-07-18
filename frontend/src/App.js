@@ -725,8 +725,16 @@ Testemunhas:
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button className="text-orange-400 hover:text-orange-300 mr-3">Editar</button>
-                      <button className="text-red-400 hover:text-red-300">Excluir</button>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => generateProcuration(client)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs transition-colors"
+                        >
+                          Gerar Procuração
+                        </button>
+                        <button className="text-orange-400 hover:text-orange-300">Editar</button>
+                        <button className="text-red-400 hover:text-red-300">Excluir</button>
+                      </div>
                     </td>
                   </tr>
                 ))}
