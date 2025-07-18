@@ -447,6 +447,12 @@ Testemunhas:
               Criar Processos de Teste
             </button>
             <button
+              onClick={createSampleFinancialData}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Criar Dados Financeiros
+            </button>
+            <button
               onClick={() => setShowForm(!showForm)}
               className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors"
             >
