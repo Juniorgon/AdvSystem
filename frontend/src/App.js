@@ -371,6 +371,70 @@ function App() {
       }
     };
 
+    const generateProcuration = (client) => {
+      const template = `PROCURAÇÃO
+
+OUTORGANTE: ${client.name}, ${client.client_type === 'individual' ? 'brasileiro' : 'empresa brasileira'}, ${client.civil_status !== 'N/A' ? client.civil_status : ''}, ${client.profession}, portador do CPF ${client.cpf}, residente e domiciliado à ${client.address.street}, ${client.address.number}, ${client.address.district}, ${client.address.city}-${client.address.state}${client.address.complement ? ', ' + client.address.complement : ''}.
+
+OUTORGADO: GB ADVOCACIA & N. COMIN, sociedade de advogados, inscrita no CNPJ sob o nº ________________, com sede à ________________, representada neste ato por seus sócios.
+
+PODERES: O outorgante confere ao outorgado amplos poderes para representá-lo em juízo ou fora dele, podendo propor ações, contestar, transigir, desistir, renunciar ao direito sobre que se funda a ação, receber e dar quitação, firmar compromissos, receber citação, confessar, reconhecer procedência do pedido, fazer acordos, pedir arquivamento, levantar alvarás, alçadas e depósitos, nomear prepostos, prestar depoimento pessoal, produzir provas, requerer medidas cautelares, interpor recursos, acompanhar diligências, enfim, praticar todos os atos necessários ao fiel desempenho do mandato.
+
+FORO: Fica eleito o foro da Comarca de São Paulo para dirimir quaisquer questões oriundas desta procuração.
+
+Local: ________________
+Data: ________________
+
+________________________________
+${client.name}
+${client.client_type === 'individual' ? 'Pessoa Física' : 'Representante Legal'}
+CPF: ${client.cpf}
+
+Testemunhas:
+1. _______________________________
+   Nome:
+   CPF:
+
+2. _______________________________
+   Nome:
+   CPF:`;
+
+      setSelectedClient(client);
+      setProcurationData(template);
+      setShowProcuration(true);
+    };
+
+    const downloadProcuration = () => {
+      const element = document.createElement('a');
+      const file = new Blob([procurationData], { type: 'text/plain' });
+      element.href = URL.createObjectURL(file);
+      element.download = `procuracao_${selectedClient.name.replace(/\s+/g, '_')}.txt`;
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+    };
+
+    const printProcuration = () => {
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Procuração - ${selectedClient.name}</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+              h1 { text-align: center; margin-bottom: 30px; }
+              .content { white-space: pre-wrap; }
+            </style>
+          </head>
+          <body>
+            <div class="content">${procurationData}</div>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    };
+
     return (
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
