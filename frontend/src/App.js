@@ -482,6 +482,71 @@ function App() {
           </div>
         )}
 
+        {showProcesses && (
+          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-white">
+                Processos do Cliente: {clients.find(c => c.id === selectedClientId)?.name}
+              </h3>
+              <button
+                onClick={() => setShowProcesses(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                ✕ Fechar
+              </button>
+            </div>
+            
+            {clientProcesses.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-700">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">Número do Processo</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">Tipo</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">Status</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">Valor</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">Posição</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">Descrição</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-700">
+                    {clientProcesses.map((process) => (
+                      <tr key={process.id} className="hover:bg-gray-700">
+                        <td className="px-4 py-2 text-sm text-white font-medium">{process.process_number}</td>
+                        <td className="px-4 py-2 text-sm text-gray-300">{process.type}</td>
+                        <td className="px-4 py-2 text-sm">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            process.status === 'Em Andamento' ? 'bg-yellow-100 text-yellow-800' :
+                            process.status === 'Concluído' ? 'bg-green-100 text-green-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {process.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 text-sm text-green-400 font-medium">
+                          R$ {process.value.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                        </td>
+                        <td className="px-4 py-2 text-sm">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            process.role === 'creditor' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {process.role === 'creditor' ? 'Credor' : 'Devedor'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 text-sm text-gray-300 max-w-xs truncate">{process.description}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-400">Nenhum processo encontrado para este cliente</p>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
