@@ -1670,7 +1670,9 @@ Testemunhas:
         {/* Transaction Form */}
         {showForm && (
           <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-            <h3 className="text-lg font-semibold text-white mb-4">Nova Transação</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">
+              {editingTransaction ? 'Editar Transação' : 'Nova Transação'}
+            </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
