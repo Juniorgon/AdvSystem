@@ -264,28 +264,23 @@ function App() {
       e.preventDefault();
       try {
         setLoading(true);
-        await axios.post(`${API}/clients`, formData);
-        setShowForm(false);
-        setFormData({
-          name: '',
-          nationality: '',
-          civil_status: '',
-          profession: '',
-          cpf: '',
-          address: {
-            street: '',
-            number: '',
-            city: '',
-            district: '',
-            state: '',
-            complement: ''
-          },
-          phone: '',
-          client_type: 'individual'
-        });
+        
+        if (editingClient) {
+          // Update existing client
+          await axios.put(`${API}/clients/${editingClient.id}`, formData);
+          alert('Cliente atualizado com sucesso!');
+        } else {
+          // Create new client
+          await axios.post(`${API}/clients`, formData);
+          alert('Cliente criado com sucesso!');
+        }
+        
+        cancelEdit();
         await fetchClients();
+        await fetchDashboardData();
       } catch (error) {
-        console.error('Error creating client:', error);
+        console.error('Error saving client:', error);
+        alert('Erro ao salvar cliente. Verifique os dados e tente novamente.');
       } finally {
         setLoading(false);
       }
