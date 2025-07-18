@@ -297,6 +297,23 @@ function App() {
       }));
     };
 
+    const fetchClientProcesses = async (clientId) => {
+      try {
+        const response = await axios.get(`${API}/clients/${clientId}/processes`);
+        setClientProcesses(response.data);
+        setSelectedClientId(clientId);
+        setShowProcesses(true);
+      } catch (error) {
+        console.error('Error fetching client processes:', error);
+        setClientProcesses([]);
+      }
+    };
+
+    const getProcessCount = (clientId) => {
+      const clientProcessCount = processes.filter(p => p.client_id === clientId).length;
+      return clientProcessCount;
+    };
+
     return (
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
