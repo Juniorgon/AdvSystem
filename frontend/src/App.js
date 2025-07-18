@@ -1772,13 +1772,19 @@ Testemunhas:
                   required
                 />
               </div>
-              <div className="flex justify-end">
+              <div className="flex justify-end space-x-2">
+                <button
+                  onClick={cancelEditTransaction}
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
                 <button
                   type="submit"
                   disabled={loading}
                   className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50"
                 >
-                  {loading ? 'Salvando...' : 'Salvar Transação'}
+                  {loading ? 'Salvando...' : editingTransaction ? 'Atualizar Transação' : 'Salvar Transação'}
                 </button>
               </div>
             </form>
