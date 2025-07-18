@@ -318,12 +318,20 @@ function App() {
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold text-white">Clientes</h2>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            {showForm ? 'Cancelar' : 'Novo Cliente'}
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={createSampleProcesses}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Criar Processos de Teste
+            </button>
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              {showForm ? 'Cancelar' : 'Novo Cliente'}
+            </button>
+          </div>
         </div>
 
         {showForm && (
