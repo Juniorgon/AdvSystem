@@ -436,6 +436,60 @@ Testemunhas:
       printWindow.print();
     };
 
+    const editClient = (client) => {
+      setEditingClient(client);
+      setFormData({
+        name: client.name,
+        nationality: client.nationality,
+        civil_status: client.civil_status,
+        profession: client.profession,
+        cpf: client.cpf,
+        address: client.address,
+        phone: client.phone,
+        client_type: client.client_type
+      });
+      setShowForm(true);
+    };
+
+    const cancelEdit = () => {
+      setEditingClient(null);
+      setFormData({
+        name: '',
+        nationality: '',
+        civil_status: '',
+        profession: '',
+        cpf: '',
+        address: {
+          street: '',
+          number: '',
+          city: '',
+          district: '',
+          state: '',
+          complement: ''
+        },
+        phone: '',
+        client_type: 'individual'
+      });
+      setShowForm(false);
+    };
+
+    const deleteClient = async (clientId, clientName) => {
+      if (window.confirm(`Tem certeza que deseja excluir o cliente "${clientName}"? Esta ação não pode ser desfeita.`)) {
+        try {
+          setLoading(true);
+          await axios.delete(`${API}/clients/${clientId}`);
+          await fetchClients();
+          await fetchDashboardData();
+          alert('Cliente excluído com sucesso!');
+        } catch (error) {
+          console.error('Error deleting client:', error);
+          alert('Erro ao excluir cliente. Verifique se não há processos vinculados.');
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
     const createSampleFinancialData = async () => {
       const sampleTransactions = [
         {
