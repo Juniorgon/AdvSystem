@@ -241,6 +241,7 @@ function App() {
     const [showProcuration, setShowProcuration] = useState(false);
     const [procurationData, setProcurationData] = useState('');
     const [selectedClient, setSelectedClient] = useState(null);
+    const [editingClient, setEditingClient] = useState(null);
     const [formData, setFormData] = useState({
       name: '',
       nationality: '',
