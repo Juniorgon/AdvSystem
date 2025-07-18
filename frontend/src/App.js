@@ -1496,6 +1496,7 @@ Testemunhas:
     const [showForm, setShowForm] = useState(false);
     const [filterType, setFilterType] = useState('all');
     const [filterStatus, setFilterStatus] = useState('all');
+    const [editingTransaction, setEditingTransaction] = useState(null);
     const [formData, setFormData] = useState({
       type: 'receita',
       description: '',
@@ -1518,23 +1519,67 @@ Testemunhas:
           process_id: formData.process_id || null
         };
         
-        await axios.post(`${API}/financial`, transactionData);
-        setShowForm(false);
-        setFormData({
-          type: 'receita',
-          description: '',
-          value: '',
-          due_date: '',
-          category: '',
-          client_id: '',
-          process_id: ''
-        });
+        if (editingTransaction) {
+          await axios.put(`${API}/financial/${editingTransaction.id}`, transactionData);
+          alert('Transação atualizada com sucesso!');
+        } else {
+          await axios.post(`${API}/financial`, transactionData);
+          alert('Transação criada com sucesso!');
+        }
+        
+        cancelEditTransaction();
         await fetchFinancialTransactions();
         await fetchDashboardData();
       } catch (error) {
-        console.error('Error creating transaction:', error);
+        console.error('Error saving transaction:', error);
+        alert('Erro ao salvar transação. Verifique os dados e tente novamente.');
       } finally {
         setLoading(false);
+      }
+    };
+
+    const editTransaction = (transaction) => {
+      setEditingTransaction(transaction);
+      setFormData({
+        type: transaction.type,
+        description: transaction.description,
+        value: transaction.value.toString(),
+        due_date: new Date(transaction.due_date).toISOString().split('T')[0],
+        category: transaction.category,
+        client_id: transaction.client_id || '',
+        process_id: transaction.process_id || ''
+      });
+      setShowForm(true);
+    };
+
+    const cancelEditTransaction = () => {
+      setEditingTransaction(null);
+      setFormData({
+        type: 'receita',
+        description: '',
+        value: '',
+        due_date: '',
+        category: '',
+        client_id: '',
+        process_id: ''
+      });
+      setShowForm(false);
+    };
+
+    const deleteTransaction = async (transactionId, description) => {
+      if (window.confirm(`Tem certeza que deseja excluir a transação "${description}"? Esta ação não pode ser desfeita.`)) {
+        try {
+          setLoading(true);
+          await axios.delete(`${API}/financial/${transactionId}`);
+          await fetchFinancialTransactions();
+          await fetchDashboardData();
+          alert('Transação excluída com sucesso!');
+        } catch (error) {
+          console.error('Error deleting transaction:', error);
+          alert('Erro ao excluir transação.');
+        } finally {
+          setLoading(false);
+        }
       }
     };
 
