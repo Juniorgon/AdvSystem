@@ -890,15 +890,539 @@ Testemunhas:
   };
 
   // Simple placeholder components for other sections
-  const Processes = () => (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold text-white mb-4">Processos</h2>
-      <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-        <p className="text-gray-300">Total de processos: {processes.length}</p>
-        <p className="text-gray-400 mt-2">Funcionalidade em desenvolvimento...</p>
+  const Processes = () => {
+    const [showForm, setShowForm] = useState(false);
+    const [filterStatus, setFilterStatus] = useState('all');
+    const [filterType, setFilterType] = useState('all');
+    const [filterClient, setFilterClient] = useState('all');
+    const [selectedProcess, setSelectedProcess] = useState(null);
+    const [showDetails, setShowDetails] = useState(false);
+    const [formData, setFormData] = useState({
+      client_id: '',
+      process_number: '',
+      type: '',
+      status: 'Em Andamento',
+      value: '',
+      description: '',
+      role: 'creditor'
+    });
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      try {
+        setLoading(true);
+        const processData = {
+          ...formData,
+          value: parseFloat(formData.value)
+        };
+        
+        await axios.post(`${API}/processes`, processData);
+        setShowForm(false);
+        setFormData({
+          client_id: '',
+          process_number: '',
+          type: '',
+          status: 'Em Andamento',
+          value: '',
+          description: '',
+          role: 'creditor'
+        });
+        await fetchProcesses();
+      } catch (error) {
+        console.error('Error creating process:', error);
+        alert('Erro ao criar processo. Verifique os dados e tente novamente.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const updateProcessStatus = async (processId, newStatus) => {
+      try {
+        await axios.put(`${API}/processes/${processId}`, { status: newStatus });
+        await fetchProcesses();
+      } catch (error) {
+        console.error('Error updating process status:', error);
+      }
+    };
+
+    const showProcessDetails = (process) => {
+      setSelectedProcess(process);
+      setShowDetails(true);
+    };
+
+    const generateProcessNumber = () => {
+      const year = new Date().getFullYear();
+      const random = Math.floor(Math.random() * 900000) + 100000;
+      const processNumber = `${random.toString().substring(0,7)}-${Math.floor(Math.random() * 90) + 10}.${year}.8.26.${Math.floor(Math.random() * 9000) + 1000}`;
+      setFormData({...formData, process_number: processNumber});
+    };
+
+    const createSampleProcessesAdvanced = async () => {
+      if (clients.length === 0) {
+        alert('Crie pelo menos um cliente primeiro!');
+        return;
+      }
+
+      const processTypes = [
+        'Ação de Cobrança',
+        'Ação Trabalhista', 
+        'Ação Cível',
+        'Ação de Indenização',
+        'Execução Fiscal',
+        'Ação Penal',
+        'Divórcio',
+        'Inventário',
+        'Usucapião',
+        'Revisional de Contrato'
+      ];
+
+      const processStatuses = ['Em Andamento', 'Suspenso', 'Concluído', 'Arquivado'];
+      const descriptions = [
+        'Cobrança de honorários advocatícios em aberto',
+        'Rescisão contratual e verbas trabalhistas',
+        'Indenização por danos morais e materiais',
+        'Execução de título executivo judicial',
+        'Ação penal por crime contra o patrimônio',
+        'Divórcio consensual com partilha de bens',
+        'Inventário com múltiplos herdeiros',
+        'Usucapião de bem imóvel urbano',
+        'Revisão de contrato bancário',
+        'Ação de despejo por falta de pagamento'
+      ];
+
+      const sampleProcesses = [];
+      for (let i = 0; i < 8; i++) {
+        const year = new Date().getFullYear();
+        const random = Math.floor(Math.random() * 900000) + 100000;
+        const processNumber = `${random.toString().substring(0,7)}-${Math.floor(Math.random() * 90) + 10}.${year}.8.26.${Math.floor(Math.random() * 9000) + 1000}`;
+        
+        sampleProcesses.push({
+          client_id: clients[i % clients.length].id,
+          process_number: processNumber,
+          type: processTypes[i % processTypes.length],
+          status: processStatuses[i % processStatuses.length],
+          value: Math.floor(Math.random() * 50000) + 5000,
+          description: descriptions[i % descriptions.length],
+          role: i % 2 === 0 ? 'creditor' : 'debtor'
+        });
+      }
+
+      try {
+        setLoading(true);
+        for (const processData of sampleProcesses) {
+          await axios.post(`${API}/processes`, processData);
+        }
+        await fetchProcesses();
+        alert('Processos avançados criados com sucesso!');
+      } catch (error) {
+        console.error('Error creating advanced processes:', error);
+        alert('Erro ao criar processos avançados');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const filteredProcesses = processes.filter(process => {
+      const statusMatch = filterStatus === 'all' || process.status === filterStatus;
+      const typeMatch = filterType === 'all' || process.type === filterType;
+      const clientMatch = filterClient === 'all' || process.client_id === filterClient;
+      return statusMatch && typeMatch && clientMatch;
+    });
+
+    const getStatusColor = (status) => {
+      switch(status) {
+        case 'Em Andamento': return 'bg-yellow-100 text-yellow-800';
+        case 'Concluído': return 'bg-green-100 text-green-800';
+        case 'Suspenso': return 'bg-orange-100 text-orange-800';
+        case 'Arquivado': return 'bg-gray-100 text-gray-800';
+        default: return 'bg-blue-100 text-blue-800';
+      }
+    };
+
+    const getRoleColor = (role) => {
+      return role === 'creditor' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+    };
+
+    const getClientName = (clientId) => {
+      const client = clients.find(c => c.id === clientId);
+      return client ? client.name : 'Cliente não encontrado';
+    };
+
+    const processStats = {
+      total: processes.length,
+      inProgress: processes.filter(p => p.status === 'Em Andamento').length,
+      completed: processes.filter(p => p.status === 'Concluído').length,
+      suspended: processes.filter(p => p.status === 'Suspenso').length,
+      archived: processes.filter(p => p.status === 'Arquivado').length,
+      totalValue: processes.reduce((sum, p) => sum + p.value, 0),
+      averageValue: processes.length > 0 ? processes.reduce((sum, p) => sum + p.value, 0) / processes.length : 0
+    };
+
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-white">Gestão de Processos</h2>
+          <div className="flex space-x-2">
+            <button
+              onClick={createSampleProcessesAdvanced}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Criar Processos Avançados
+            </button>
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              {showForm ? 'Cancelar' : 'Novo Processo'}
+            </button>
+          </div>
+        </div>
+
+        {/* Process Statistics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+            <h3 className="text-sm font-medium text-gray-400">Total Processos</h3>
+            <p className="text-2xl font-bold text-white">{processStats.total}</p>
+          </div>
+          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+            <h3 className="text-sm font-medium text-gray-400">Em Andamento</h3>
+            <p className="text-2xl font-bold text-yellow-400">{processStats.inProgress}</p>
+          </div>
+          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+            <h3 className="text-sm font-medium text-gray-400">Concluídos</h3>
+            <p className="text-2xl font-bold text-green-400">{processStats.completed}</p>
+          </div>
+          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+            <h3 className="text-sm font-medium text-gray-400">Suspensos</h3>
+            <p className="text-2xl font-bold text-orange-400">{processStats.suspended}</p>
+          </div>
+          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+            <h3 className="text-sm font-medium text-gray-400">Valor Total</h3>
+            <p className="text-2xl font-bold text-blue-400">
+              R$ {processStats.totalValue.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+            </p>
+          </div>
+          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+            <h3 className="text-sm font-medium text-gray-400">Valor Médio</h3>
+            <p className="text-2xl font-bold text-purple-400">
+              R$ {processStats.averageValue.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+            </p>
+          </div>
+        </div>
+
+        {/* Process Form */}
+        {showForm && (
+          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
+            <h3 className="text-lg font-semibold text-white mb-4">Novo Processo</h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Cliente</label>
+                  <select
+                    value={formData.client_id}
+                    onChange={(e) => setFormData({...formData, client_id: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  >
+                    <option value="">Selecione um cliente...</option>
+                    {clients.map(client => (
+                      <option key={client.id} value={client.id}>{client.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Número do Processo</label>
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      value={formData.process_number}
+                      onChange={(e) => setFormData({...formData, process_number: e.target.value})}
+                      className="flex-1 p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      placeholder="Ex: 1234567-89.2024.8.26.0100"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={generateProcessNumber}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md text-sm"
+                    >
+                      Gerar
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Tipo do Processo</label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => setFormData({...formData, type: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  >
+                    <option value="">Selecione o tipo...</option>
+                    <option value="Ação de Cobrança">Ação de Cobrança</option>
+                    <option value="Ação Trabalhista">Ação Trabalhista</option>
+                    <option value="Ação Cível">Ação Cível</option>
+                    <option value="Ação de Indenização">Ação de Indenização</option>
+                    <option value="Execução Fiscal">Execução Fiscal</option>
+                    <option value="Ação Penal">Ação Penal</option>
+                    <option value="Divórcio">Divórcio</option>
+                    <option value="Inventário">Inventário</option>
+                    <option value="Usucapião">Usucapião</option>
+                    <option value="Revisional de Contrato">Revisional de Contrato</option>
+                    <option value="Outros">Outros</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Status</label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({...formData, status: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="Em Andamento">Em Andamento</option>
+                    <option value="Suspenso">Suspenso</option>
+                    <option value="Concluído">Concluído</option>
+                    <option value="Arquivado">Arquivado</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Valor da Causa</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.value}
+                    onChange={(e) => setFormData({...formData, value: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Posição do Cliente</label>
+                  <select
+                    value={formData.role}
+                    onChange={(e) => setFormData({...formData, role: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="creditor">Credor (Autor)</option>
+                    <option value="debtor">Devedor (Réu)</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-1">Descrição</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  rows="3"
+                  placeholder="Descreva o processo..."
+                  required
+                />
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Salvando...' : 'Salvar Processo'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Process Details Modal */}
+        {showDetails && selectedProcess && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-white">Detalhes do Processo</h3>
+                <button
+                  onClick={() => setShowDetails(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-400">Número do Processo</h4>
+                    <p className="text-white font-mono">{selectedProcess.process_number}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-400">Cliente</h4>
+                    <p className="text-white">{getClientName(selectedProcess.client_id)}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-400">Tipo</h4>
+                    <p className="text-white">{selectedProcess.type}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-400">Status</h4>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(selectedProcess.status)}`}>
+                      {selectedProcess.status}
+                    </span>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-400">Valor da Causa</h4>
+                    <p className="text-green-400 font-semibold">
+                      R$ {selectedProcess.value.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-400">Posição</h4>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRoleColor(selectedProcess.role)}`}>
+                      {selectedProcess.role === 'creditor' ? 'Credor (Autor)' : 'Devedor (Réu)'}
+                    </span>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-gray-400 mb-2">Descrição</h4>
+                  <p className="text-white bg-gray-700 p-3 rounded-md">{selectedProcess.description}</p>
+                </div>
+                
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={() => setShowDetails(false)}
+                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Fechar
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Here you could implement edit functionality
+                      alert('Funcionalidade de edição em desenvolvimento');
+                    }}
+                    className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Editar Processo
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Filters */}
+        <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+          <div className="flex flex-wrap gap-4">
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-1">Status</label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="all">Todos</option>
+                <option value="Em Andamento">Em Andamento</option>
+                <option value="Suspenso">Suspenso</option>
+                <option value="Concluído">Concluído</option>
+                <option value="Arquivado">Arquivado</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-1">Tipo</label>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="all">Todos</option>
+                <option value="Ação de Cobrança">Ação de Cobrança</option>
+                <option value="Ação Trabalhista">Ação Trabalhista</option>
+                <option value="Ação Cível">Ação Cível</option>
+                <option value="Ação de Indenização">Ação de Indenização</option>
+                <option value="Execução Fiscal">Execução Fiscal</option>
+                <option value="Outros">Outros</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-1">Cliente</label>
+              <select
+                value={filterClient}
+                onChange={(e) => setFilterClient(e.target.value)}
+                className="p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="all">Todos</option>
+                {clients.map(client => (
+                  <option key={client.id} value={client.id}>{client.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Processes Table */}
+        <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Processo</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Cliente</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Tipo</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Valor</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Posição</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {filteredProcesses.map((process) => (
+                  <tr key={process.id} className="hover:bg-gray-700">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-white">{process.process_number}</div>
+                      <div className="text-sm text-gray-400 truncate max-w-xs">{process.description}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                      {getClientName(process.client_id)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{process.type}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(process.status)}`}>
+                        {process.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-400">
+                      R$ {process.value.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRoleColor(process.role)}`}>
+                        {process.role === 'creditor' ? 'Credor' : 'Devedor'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => showProcessDetails(process)}
+                          className="text-blue-400 hover:text-blue-300"
+                        >
+                          Ver
+                        </button>
+                        <button
+                          onClick={() => updateProcessStatus(process.id, process.status === 'Em Andamento' ? 'Concluído' : 'Em Andamento')}
+                          className="text-green-400 hover:text-green-300"
+                        >
+                          {process.status === 'Em Andamento' ? 'Concluir' : 'Reativar'}
+                        </button>
+                        <button className="text-orange-400 hover:text-orange-300">Editar</button>
+                        <button className="text-red-400 hover:text-red-300">Excluir</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const Financial = () => {
     const [showForm, setShowForm] = useState(false);
