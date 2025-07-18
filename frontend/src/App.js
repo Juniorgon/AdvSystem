@@ -676,6 +676,77 @@ Testemunhas:
           </div>
         )}
 
+        {/* Procuration Modal */}
+        {showProcuration && selectedClient && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold text-white">
+                  Procuração - {selectedClient.name}
+                </h3>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={downloadProcuration}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    📄 Baixar
+                  </button>
+                  <button
+                    onClick={printProcuration}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    🖨️ Imprimir
+                  </button>
+                  <button
+                    onClick={() => setShowProcuration(false)}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="bg-gray-700 p-4 rounded-lg">
+                  <p className="text-gray-300 text-sm mb-2">
+                    <strong>Dados preenchidos automaticamente:</strong> Nome, Nacionalidade, Estado Civil, Profissão, CPF, Endereço
+                  </p>
+                  <p className="text-gray-300 text-sm">
+                    <strong>Telefone excluído conforme solicitado.</strong> Edite o texto abaixo conforme necessário.
+                  </p>
+                </div>
+                
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">
+                    Texto da Procuração (Editável)
+                  </label>
+                  <textarea
+                    value={procurationData}
+                    onChange={(e) => setProcurationData(e.target.value)}
+                    className="w-full h-96 p-4 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500 font-mono text-sm"
+                    placeholder="Digite o texto da procuração..."
+                  />
+                </div>
+                
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={() => setShowProcuration(false)}
+                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={downloadProcuration}
+                    className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Salvar e Baixar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
