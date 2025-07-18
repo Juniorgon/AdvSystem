@@ -682,15 +682,344 @@ function App() {
     </div>
   );
 
-  const Financial = () => (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold text-white mb-4">Financeiro</h2>
-      <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-        <p className="text-gray-300">Total de transações: {financialTransactions.length}</p>
-        <p className="text-gray-400 mt-2">Funcionalidade em desenvolvimento...</p>
+  const Financial = () => {
+    const [showForm, setShowForm] = useState(false);
+    const [filterType, setFilterType] = useState('all');
+    const [filterStatus, setFilterStatus] = useState('all');
+    const [formData, setFormData] = useState({
+      type: 'receita',
+      description: '',
+      value: '',
+      due_date: '',
+      category: '',
+      client_id: '',
+      process_id: ''
+    });
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      try {
+        setLoading(true);
+        const transactionData = {
+          ...formData,
+          value: parseFloat(formData.value),
+          due_date: new Date(formData.due_date).toISOString(),
+          client_id: formData.client_id || null,
+          process_id: formData.process_id || null
+        };
+        
+        await axios.post(`${API}/financial`, transactionData);
+        setShowForm(false);
+        setFormData({
+          type: 'receita',
+          description: '',
+          value: '',
+          due_date: '',
+          category: '',
+          client_id: '',
+          process_id: ''
+        });
+        await fetchFinancialTransactions();
+        await fetchDashboardData();
+      } catch (error) {
+        console.error('Error creating transaction:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const markAsPaid = async (transactionId) => {
+      try {
+        await axios.put(`${API}/financial/${transactionId}`, {
+          status: 'pago',
+          payment_date: new Date().toISOString()
+        });
+        await fetchFinancialTransactions();
+        await fetchDashboardData();
+      } catch (error) {
+        console.error('Error marking as paid:', error);
+      }
+    };
+
+    const filteredTransactions = financialTransactions.filter(transaction => {
+      const typeMatch = filterType === 'all' || transaction.type === filterType;
+      const statusMatch = filterStatus === 'all' || transaction.status === filterStatus;
+      return typeMatch && statusMatch;
+    });
+
+    const getStatusColor = (status) => {
+      switch(status) {
+        case 'pago': return 'bg-green-100 text-green-800';
+        case 'pendente': return 'bg-yellow-100 text-yellow-800';
+        case 'vencido': return 'bg-red-100 text-red-800';
+        default: return 'bg-gray-100 text-gray-800';
+      }
+    };
+
+    const getTypeColor = (type) => {
+      return type === 'receita' ? 'text-green-400' : 'text-red-400';
+    };
+
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-white">Controle Financeiro</h2>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            {showForm ? 'Cancelar' : 'Nova Transação'}
+          </button>
+        </div>
+
+        {/* Financial Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+            <h3 className="text-sm font-medium text-gray-400">Total Receitas</h3>
+            <p className="text-2xl font-bold text-green-400">
+              R$ {financialTransactions
+                .filter(t => t.type === 'receita')
+                .reduce((sum, t) => sum + t.value, 0)
+                .toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+            </p>
+          </div>
+          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+            <h3 className="text-sm font-medium text-gray-400">Total Despesas</h3>
+            <p className="text-2xl font-bold text-red-400">
+              R$ {financialTransactions
+                .filter(t => t.type === 'despesa')
+                .reduce((sum, t) => sum + t.value, 0)
+                .toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+            </p>
+          </div>
+          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+            <h3 className="text-sm font-medium text-gray-400">A Receber</h3>
+            <p className="text-2xl font-bold text-yellow-400">
+              R$ {financialTransactions
+                .filter(t => t.type === 'receita' && t.status === 'pendente')
+                .reduce((sum, t) => sum + t.value, 0)
+                .toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+            </p>
+          </div>
+          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+            <h3 className="text-sm font-medium text-gray-400">A Pagar</h3>
+            <p className="text-2xl font-bold text-orange-400">
+              R$ {financialTransactions
+                .filter(t => t.type === 'despesa' && t.status === 'pendente')
+                .reduce((sum, t) => sum + t.value, 0)
+                .toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+            </p>
+          </div>
+        </div>
+
+        {/* Transaction Form */}
+        {showForm && (
+          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
+            <h3 className="text-lg font-semibold text-white mb-4">Nova Transação</h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Tipo</label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => setFormData({...formData, type: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="receita">Receita</option>
+                    <option value="despesa">Despesa</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Valor</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.value}
+                    onChange={(e) => setFormData({...formData, value: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Categoria</label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  >
+                    <option value="">Selecione...</option>
+                    {formData.type === 'receita' ? (
+                      <>
+                        <option value="Honorários">Honorários</option>
+                        <option value="Sucumbência">Sucumbência</option>
+                        <option value="Consultoria">Consultoria</option>
+                        <option value="Outros">Outros</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="Aluguel">Aluguel</option>
+                        <option value="Salários">Salários</option>
+                        <option value="Fornecedores">Fornecedores</option>
+                        <option value="Impostos">Impostos</option>
+                        <option value="Custas Processuais">Custas Processuais</option>
+                        <option value="Outros">Outros</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Data de Vencimento</label>
+                  <input
+                    type="date"
+                    value={formData.due_date}
+                    onChange={(e) => setFormData({...formData, due_date: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Cliente (Opcional)</label>
+                  <select
+                    value={formData.client_id}
+                    onChange={(e) => setFormData({...formData, client_id: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="">Selecione...</option>
+                    {clients.map(client => (
+                      <option key={client.id} value={client.id}>{client.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Processo (Opcional)</label>
+                  <select
+                    value={formData.process_id}
+                    onChange={(e) => setFormData({...formData, process_id: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="">Selecione...</option>
+                    {processes.map(process => (
+                      <option key={process.id} value={process.id}>{process.process_number}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-1">Descrição</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  rows="3"
+                  required
+                />
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Salvando...' : 'Salvar Transação'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Filters */}
+        <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+          <div className="flex flex-wrap gap-4">
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-1">Tipo</label>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="all">Todos</option>
+                <option value="receita">Receitas</option>
+                <option value="despesa">Despesas</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-1">Status</label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="all">Todos</option>
+                <option value="pendente">Pendente</option>
+                <option value="pago">Pago</option>
+                <option value="vencido">Vencido</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Transactions Table */}
+        <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Tipo</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Descrição</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Valor</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Categoria</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Vencimento</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {filteredTransactions.map((transaction) => (
+                  <tr key={transaction.id} className="hover:bg-gray-700">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        transaction.type === 'receita' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {transaction.type === 'receita' ? 'Receita' : 'Despesa'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">{transaction.description}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <span className={getTypeColor(transaction.type)}>
+                        R$ {transaction.value.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{transaction.category}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                      {new Date(transaction.due_date).toLocaleDateString('pt-BR')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(transaction.status)}`}>
+                        {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      {transaction.status === 'pendente' && (
+                        <button
+                          onClick={() => markAsPaid(transaction.id)}
+                          className="text-green-400 hover:text-green-300 mr-3"
+                        >
+                          Marcar como Pago
+                        </button>
+                      )}
+                      <button className="text-orange-400 hover:text-orange-300 mr-3">Editar</button>
+                      <button className="text-red-400 hover:text-red-300">Excluir</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const Contracts = () => (
     <div className="p-6">
