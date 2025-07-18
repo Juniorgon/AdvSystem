@@ -314,6 +314,60 @@ function App() {
       return clientProcessCount;
     };
 
+    const createSampleProcesses = async () => {
+      if (clients.length === 0) {
+        alert('Crie pelo menos um cliente primeiro!');
+        return;
+      }
+
+      const sampleProcesses = [
+        {
+          client_id: clients[0].id,
+          process_number: "0001234-56.2024.8.26.0100",
+          type: "Ação de Cobrança",
+          status: "Em Andamento",
+          value: 15000.00,
+          description: "Cobrança de honorários advocatícios",
+          role: "creditor"
+        },
+        {
+          client_id: clients[0].id,
+          process_number: "0007890-12.2024.8.26.0200",
+          type: "Ação Trabalhista",
+          status: "Concluído",
+          value: 8500.00,
+          description: "Rescisão contratual e verbas trabalhistas",
+          role: "debtor"
+        }
+      ];
+
+      if (clients.length > 1) {
+        sampleProcesses.push({
+          client_id: clients[1].id,
+          process_number: "0005678-90.2024.8.26.0300",
+          type: "Ação Cível",
+          status: "Em Andamento",
+          value: 25000.00,
+          description: "Indenização por danos morais e materiais",
+          role: "creditor"
+        });
+      }
+
+      try {
+        setLoading(true);
+        for (const processData of sampleProcesses) {
+          await axios.post(`${API}/processes`, processData);
+        }
+        await fetchProcesses();
+        alert('Processos de teste criados com sucesso!');
+      } catch (error) {
+        console.error('Error creating sample processes:', error);
+        alert('Erro ao criar processos de teste');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     return (
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
