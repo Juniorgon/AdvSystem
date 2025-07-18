@@ -235,6 +235,9 @@ function App() {
   // Clients Component
   const Clients = () => {
     const [showForm, setShowForm] = useState(false);
+    const [selectedClientId, setSelectedClientId] = useState(null);
+    const [clientProcesses, setClientProcesses] = useState([]);
+    const [showProcesses, setShowProcesses] = useState(false);
     const [formData, setFormData] = useState({
       name: '',
       nationality: '',
