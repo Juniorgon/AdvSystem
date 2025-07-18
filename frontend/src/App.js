@@ -435,6 +435,72 @@ Testemunhas:
       printWindow.print();
     };
 
+    const createSampleFinancialData = async () => {
+      const sampleTransactions = [
+        {
+          type: 'receita',
+          description: 'Honorários advocatícios - Caso Maria Silva',
+          value: 5000.00,
+          due_date: new Date('2024-12-15').toISOString(),
+          category: 'Honorários',
+          client_id: clients.length > 0 ? clients[0].id : null
+        },
+        {
+          type: 'receita',
+          description: 'Sucumbência - Ação Trabalhista',
+          value: 3500.00,
+          due_date: new Date('2024-11-20').toISOString(),
+          category: 'Sucumbência',
+          client_id: clients.length > 1 ? clients[1].id : null
+        },
+        {
+          type: 'despesa',
+          description: 'Aluguel do escritório - Novembro',
+          value: 4500.00,
+          due_date: new Date('2024-11-05').toISOString(),
+          category: 'Aluguel'
+        },
+        {
+          type: 'despesa',
+          description: 'Salário secretária',
+          value: 2800.00,
+          due_date: new Date('2024-11-30').toISOString(),
+          category: 'Salários'
+        },
+        {
+          type: 'despesa',
+          description: 'Custas processuais - Processo 001234',
+          value: 350.00,
+          due_date: new Date('2024-10-15').toISOString(),
+          category: 'Custas Processuais',
+          status: 'pago'
+        },
+        {
+          type: 'receita',
+          description: 'Consultoria jurídica - Empresa XYZ',
+          value: 1500.00,
+          due_date: new Date('2024-09-30').toISOString(),
+          category: 'Consultoria',
+          status: 'pago'
+        }
+      ];
+
+      try {
+        setLoading(true);
+        for (const transactionData of sampleTransactions) {
+          await axios.post(`${API}/financial`, transactionData);
+        }
+        await fetchFinancialTransactions();
+        await fetchDashboardData();
+        alert('Dados financeiros de teste criados com sucesso!');
+      } catch (error) {
+        console.error('Error creating sample financial data:', error);
+        alert('Erro ao criar dados financeiros de teste');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     return (
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
