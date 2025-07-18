@@ -238,6 +238,9 @@ function App() {
     const [selectedClientId, setSelectedClientId] = useState(null);
     const [clientProcesses, setClientProcesses] = useState([]);
     const [showProcesses, setShowProcesses] = useState(false);
+    const [showProcuration, setShowProcuration] = useState(false);
+    const [procurationData, setProcurationData] = useState('');
+    const [selectedClient, setSelectedClient] = useState(null);
     const [formData, setFormData] = useState({
       name: '',
       nationality: '',
