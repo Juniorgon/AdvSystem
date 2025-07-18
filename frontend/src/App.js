@@ -933,8 +933,18 @@ Testemunhas:
                         >
                           Gerar Procuração
                         </button>
-                        <button className="text-orange-400 hover:text-orange-300">Editar</button>
-                        <button className="text-red-400 hover:text-red-300">Excluir</button>
+                        <button 
+                          onClick={() => editClient(client)}
+                          className="text-orange-400 hover:text-orange-300"
+                        >
+                          Editar
+                        </button>
+                        <button 
+                          onClick={() => deleteClient(client.id, client.name)}
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          Excluir
+                        </button>
                       </div>
                     </td>
                   </tr>
