@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException, Query
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -6,9 +6,10 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 import uuid
 from datetime import datetime
+from enum import Enum
 
 
 ROOT_DIR = Path(__file__).parent
@@ -25,32 +26,380 @@ app = FastAPI()
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
+# Enums
+class ClientType(str, Enum):
+    individual = "individual"
+    corporate = "corporate"
 
-# Define Models
-class StatusCheck(BaseModel):
+class ProcessRole(str, Enum):
+    creditor = "creditor"
+    debtor = "debtor"
+
+class TransactionType(str, Enum):
+    receita = "receita"
+    despesa = "despesa"
+
+class TransactionStatus(str, Enum):
+    pendente = "pendente"
+    pago = "pago"
+    vencido = "vencido"
+
+# Models
+class Address(BaseModel):
+    street: str
+    number: str
+    city: str
+    district: str
+    state: str
+    complement: Optional[str] = ""
+
+class Client(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    name: str
+    nationality: str
+    civil_status: str
+    profession: str
+    cpf: str
+    address: Address
+    phone: str
+    client_type: ClientType
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
+class ClientCreate(BaseModel):
+    name: str
+    nationality: str
+    civil_status: str
+    profession: str
+    cpf: str
+    address: Address
+    phone: str
+    client_type: ClientType
 
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
+class ClientUpdate(BaseModel):
+    name: Optional[str] = None
+    nationality: Optional[str] = None
+    civil_status: Optional[str] = None
+    profession: Optional[str] = None
+    cpf: Optional[str] = None
+    address: Optional[Address] = None
+    phone: Optional[str] = None
+    client_type: Optional[ClientType] = None
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.dict()
-    status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
-    return status_obj
+class Process(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    client_id: str
+    process_number: str
+    type: str
+    status: str
+    value: float
+    description: str
+    role: ProcessRole
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
-    return [StatusCheck(**status_check) for status_check in status_checks]
+class ProcessCreate(BaseModel):
+    client_id: str
+    process_number: str
+    type: str
+    status: str
+    value: float
+    description: str
+    role: ProcessRole
+
+class ProcessUpdate(BaseModel):
+    process_number: Optional[str] = None
+    type: Optional[str] = None
+    status: Optional[str] = None
+    value: Optional[float] = None
+    description: Optional[str] = None
+    role: Optional[ProcessRole] = None
+
+class FinancialTransaction(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    client_id: Optional[str] = None
+    process_id: Optional[str] = None
+    type: TransactionType
+    description: str
+    value: float
+    due_date: datetime
+    payment_date: Optional[datetime] = None
+    status: TransactionStatus
+    category: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class FinancialTransactionCreate(BaseModel):
+    client_id: Optional[str] = None
+    process_id: Optional[str] = None
+    type: TransactionType
+    description: str
+    value: float
+    due_date: datetime
+    payment_date: Optional[datetime] = None
+    status: TransactionStatus = TransactionStatus.pendente
+    category: str
+
+class FinancialTransactionUpdate(BaseModel):
+    description: Optional[str] = None
+    value: Optional[float] = None
+    due_date: Optional[datetime] = None
+    payment_date: Optional[datetime] = None
+    status: Optional[TransactionStatus] = None
+    category: Optional[str] = None
+
+class Contract(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    client_id: str
+    process_id: Optional[str] = None
+    value: float
+    payment_conditions: str
+    installments: int
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class ContractCreate(BaseModel):
+    client_id: str
+    process_id: Optional[str] = None
+    value: float
+    payment_conditions: str
+    installments: int
+
+class DashboardStats(BaseModel):
+    total_clients: int
+    total_processes: int
+    total_revenue: float
+    total_expenses: float
+    pending_payments: int
+    overdue_payments: int
+    monthly_revenue: float
+    monthly_expenses: float
+
+# Client endpoints
+@api_router.post("/clients", response_model=Client)
+async def create_client(client: ClientCreate):
+    client_dict = client.dict()
+    client_obj = Client(**client_dict)
+    await db.clients.insert_one(client_obj.dict())
+    return client_obj
+
+@api_router.get("/clients", response_model=List[Client])
+async def get_clients():
+    clients = await db.clients.find().to_list(1000)
+    return [Client(**client) for client in clients]
+
+@api_router.get("/clients/{client_id}", response_model=Client)
+async def get_client(client_id: str):
+    client = await db.clients.find_one({"id": client_id})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    return Client(**client)
+
+@api_router.put("/clients/{client_id}", response_model=Client)
+async def update_client(client_id: str, client_update: ClientUpdate):
+    existing_client = await db.clients.find_one({"id": client_id})
+    if not existing_client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    update_data = client_update.dict(exclude_unset=True)
+    update_data["updated_at"] = datetime.utcnow()
+    
+    await db.clients.update_one({"id": client_id}, {"$set": update_data})
+    
+    updated_client = await db.clients.find_one({"id": client_id})
+    return Client(**updated_client)
+
+@api_router.delete("/clients/{client_id}")
+async def delete_client(client_id: str):
+    result = await db.clients.delete_one({"id": client_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Client not found")
+    return {"message": "Client deleted successfully"}
+
+# Process endpoints
+@api_router.post("/processes", response_model=Process)
+async def create_process(process: ProcessCreate):
+    # Verify client exists
+    client = await db.clients.find_one({"id": process.client_id})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    process_dict = process.dict()
+    process_obj = Process(**process_dict)
+    await db.processes.insert_one(process_obj.dict())
+    return process_obj
+
+@api_router.get("/processes", response_model=List[Process])
+async def get_processes():
+    processes = await db.processes.find().to_list(1000)
+    return [Process(**process) for process in processes]
+
+@api_router.get("/processes/{process_id}", response_model=Process)
+async def get_process(process_id: str):
+    process = await db.processes.find_one({"id": process_id})
+    if not process:
+        raise HTTPException(status_code=404, detail="Process not found")
+    return Process(**process)
+
+@api_router.get("/clients/{client_id}/processes", response_model=List[Process])
+async def get_client_processes(client_id: str):
+    processes = await db.processes.find({"client_id": client_id}).to_list(1000)
+    return [Process(**process) for process in processes]
+
+@api_router.put("/processes/{process_id}", response_model=Process)
+async def update_process(process_id: str, process_update: ProcessUpdate):
+    existing_process = await db.processes.find_one({"id": process_id})
+    if not existing_process:
+        raise HTTPException(status_code=404, detail="Process not found")
+    
+    update_data = process_update.dict(exclude_unset=True)
+    update_data["updated_at"] = datetime.utcnow()
+    
+    await db.processes.update_one({"id": process_id}, {"$set": update_data})
+    
+    updated_process = await db.processes.find_one({"id": process_id})
+    return Process(**updated_process)
+
+@api_router.delete("/processes/{process_id}")
+async def delete_process(process_id: str):
+    result = await db.processes.delete_one({"id": process_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Process not found")
+    return {"message": "Process deleted successfully"}
+
+# Financial Transaction endpoints
+@api_router.post("/financial", response_model=FinancialTransaction)
+async def create_financial_transaction(transaction: FinancialTransactionCreate):
+    transaction_dict = transaction.dict()
+    transaction_obj = FinancialTransaction(**transaction_dict)
+    await db.financial_transactions.insert_one(transaction_obj.dict())
+    return transaction_obj
+
+@api_router.get("/financial", response_model=List[FinancialTransaction])
+async def get_financial_transactions():
+    transactions = await db.financial_transactions.find().to_list(1000)
+    return [FinancialTransaction(**transaction) for transaction in transactions]
+
+@api_router.get("/financial/{transaction_id}", response_model=FinancialTransaction)
+async def get_financial_transaction(transaction_id: str):
+    transaction = await db.financial_transactions.find_one({"id": transaction_id})
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    return FinancialTransaction(**transaction)
+
+@api_router.put("/financial/{transaction_id}", response_model=FinancialTransaction)
+async def update_financial_transaction(transaction_id: str, transaction_update: FinancialTransactionUpdate):
+    existing_transaction = await db.financial_transactions.find_one({"id": transaction_id})
+    if not existing_transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    update_data = transaction_update.dict(exclude_unset=True)
+    update_data["updated_at"] = datetime.utcnow()
+    
+    await db.financial_transactions.update_one({"id": transaction_id}, {"$set": update_data})
+    
+    updated_transaction = await db.financial_transactions.find_one({"id": transaction_id})
+    return FinancialTransaction(**updated_transaction)
+
+@api_router.delete("/financial/{transaction_id}")
+async def delete_financial_transaction(transaction_id: str):
+    result = await db.financial_transactions.delete_one({"id": transaction_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    return {"message": "Transaction deleted successfully"}
+
+# Contract endpoints
+@api_router.post("/contracts", response_model=Contract)
+async def create_contract(contract: ContractCreate):
+    # Verify client exists
+    client = await db.clients.find_one({"id": contract.client_id})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    contract_dict = contract.dict()
+    contract_obj = Contract(**contract_dict)
+    await db.contracts.insert_one(contract_obj.dict())
+    return contract_obj
+
+@api_router.get("/contracts", response_model=List[Contract])
+async def get_contracts():
+    contracts = await db.contracts.find().to_list(1000)
+    return [Contract(**contract) for contract in contracts]
+
+@api_router.get("/contracts/{contract_id}", response_model=Contract)
+async def get_contract(contract_id: str):
+    contract = await db.contracts.find_one({"id": contract_id})
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    return Contract(**contract)
+
+@api_router.get("/clients/{client_id}/contracts", response_model=List[Contract])
+async def get_client_contracts(client_id: str):
+    contracts = await db.contracts.find({"client_id": client_id}).to_list(1000)
+    return [Contract(**contract) for contract in contracts]
+
+# Dashboard endpoint
+@api_router.get("/dashboard", response_model=DashboardStats)
+async def get_dashboard_stats():
+    # Count totals
+    total_clients = await db.clients.count_documents({})
+    total_processes = await db.processes.count_documents({})
+    
+    # Calculate financial totals
+    revenue_pipeline = [
+        {"$match": {"type": "receita"}},
+        {"$group": {"_id": None, "total": {"$sum": "$value"}}}
+    ]
+    revenue_result = await db.financial_transactions.aggregate(revenue_pipeline).to_list(1)
+    total_revenue = revenue_result[0]["total"] if revenue_result else 0
+    
+    expenses_pipeline = [
+        {"$match": {"type": "despesa"}},
+        {"$group": {"_id": None, "total": {"$sum": "$value"}}}
+    ]
+    expenses_result = await db.financial_transactions.aggregate(expenses_pipeline).to_list(1)
+    total_expenses = expenses_result[0]["total"] if expenses_result else 0
+    
+    # Count pending and overdue payments
+    pending_payments = await db.financial_transactions.count_documents({"status": "pendente"})
+    overdue_payments = await db.financial_transactions.count_documents({"status": "vencido"})
+    
+    # Calculate monthly revenue and expenses (current month)
+    from datetime import datetime, timedelta
+    current_month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    next_month_start = current_month_start + timedelta(days=32)
+    next_month_start = next_month_start.replace(day=1)
+    
+    monthly_revenue_pipeline = [
+        {"$match": {
+            "type": "receita",
+            "due_date": {"$gte": current_month_start, "$lt": next_month_start}
+        }},
+        {"$group": {"_id": None, "total": {"$sum": "$value"}}}
+    ]
+    monthly_revenue_result = await db.financial_transactions.aggregate(monthly_revenue_pipeline).to_list(1)
+    monthly_revenue = monthly_revenue_result[0]["total"] if monthly_revenue_result else 0
+    
+    monthly_expenses_pipeline = [
+        {"$match": {
+            "type": "despesa",
+            "due_date": {"$gte": current_month_start, "$lt": next_month_start}
+        }},
+        {"$group": {"_id": None, "total": {"$sum": "$value"}}}
+    ]
+    monthly_expenses_result = await db.financial_transactions.aggregate(monthly_expenses_pipeline).to_list(1)
+    monthly_expenses = monthly_expenses_result[0]["total"] if monthly_expenses_result else 0
+    
+    return DashboardStats(
+        total_clients=total_clients,
+        total_processes=total_processes,
+        total_revenue=total_revenue,
+        total_expenses=total_expenses,
+        pending_payments=pending_payments,
+        overdue_payments=overdue_payments,
+        monthly_revenue=monthly_revenue,
+        monthly_expenses=monthly_expenses
+    )
 
 # Include the router in the main app
 app.include_router(api_router)
