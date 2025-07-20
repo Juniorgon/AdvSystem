@@ -2374,17 +2374,7 @@ Testemunhas:
           await fetchDashboardData();
           toast.success('Transação excluída com sucesso!');
         } catch (error) {
-          console.error('Error deleting transaction:', error);
-          if (error.response?.status === 400) {
-            // Show specific error message from backend
-            toast.error(error.response.data.detail);
-          } else if (error.response?.status === 404) {
-            toast.error('Transação não encontrada.');
-          } else if (error.response?.status === 403) {
-            toast.error('Você não tem permissão para excluir esta transação.');
-          } else {
-            toast.error('Erro inesperado ao excluir transação. Tente novamente.');
-          }
+          handleApiError(error, 'Erro ao excluir transação.');
         } finally {
           setLoading(false);
         }
