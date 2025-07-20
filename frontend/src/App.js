@@ -244,6 +244,163 @@ function App() {
     </nav>
   );
 
+  // Login Modal Component
+  const LoginModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 w-full max-w-md">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-semibold text-white">Login</h3>
+          <button
+            onClick={() => setShowLogin(false)}
+            className="text-gray-400 hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
+        
+        <form onSubmit={handleLoginSubmit} className="space-y-4">
+          <div>
+            <label className="block text-gray-300 text-sm font-medium mb-1">Usuário</label>
+            <input
+              type="text"
+              value={loginForm.username}
+              onChange={(e) => setLoginForm({...loginForm, username: e.target.value})}
+              className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-gray-300 text-sm font-medium mb-1">Senha</label>
+            <input
+              type="password"
+              value={loginForm.password}
+              onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
+              className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              required
+            />
+          </div>
+          
+          <div className="flex justify-end space-x-2">
+            <button
+              type="button"
+              onClick={() => setShowLogin(false)}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors"
+            >
+              Entrar
+            </button>
+          </div>
+        </form>
+        
+        <div className="mt-4 p-3 bg-blue-900 bg-opacity-30 border border-blue-600 rounded-lg">
+          <p className="text-blue-200 text-sm">
+            <strong>Usuário padrão:</strong><br/>
+            Usuário: admin<br/>
+            Senha: admin123
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Register Modal Component
+  const RegisterModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 w-full max-w-md">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-semibold text-white">Registrar Usuário</h3>
+          <button
+            onClick={() => setShowRegister(false)}
+            className="text-gray-400 hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
+        
+        <form onSubmit={handleRegisterSubmit} className="space-y-4">
+          <div>
+            <label className="block text-gray-300 text-sm font-medium mb-1">Nome Completo</label>
+            <input
+              type="text"
+              value={registerForm.full_name}
+              onChange={(e) => setRegisterForm({...registerForm, full_name: e.target.value})}
+              className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-gray-300 text-sm font-medium mb-1">Usuário</label>
+            <input
+              type="text"
+              value={registerForm.username}
+              onChange={(e) => setRegisterForm({...registerForm, username: e.target.value})}
+              className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-gray-300 text-sm font-medium mb-1">Email</label>
+            <input
+              type="email"
+              value={registerForm.email}
+              onChange={(e) => setRegisterForm({...registerForm, email: e.target.value})}
+              className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-gray-300 text-sm font-medium mb-1">Senha</label>
+            <input
+              type="password"
+              value={registerForm.password}
+              onChange={(e) => setRegisterForm({...registerForm, password: e.target.value})}
+              className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-gray-300 text-sm font-medium mb-1">Função</label>
+            <select
+              value={registerForm.role}
+              onChange={(e) => setRegisterForm({...registerForm, role: e.target.value})}
+              className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+            >
+              <option value="lawyer">Advogado</option>
+              <option value="secretary">Secretário(a)</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </div>
+          
+          <div className="flex justify-end space-x-2">
+            <button
+              type="button"
+              onClick={() => setShowRegister(false)}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors"
+            >
+              Registrar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+
   // Dashboard Component with Charts
   const Dashboard = () => {
     const [chartPeriod, setChartPeriod] = useState('month');
