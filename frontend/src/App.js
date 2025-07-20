@@ -2030,7 +2030,7 @@ Testemunhas:
           toast.success('Transação atualizada com sucesso!');
         } else {
           await axios.post(`${API}/financial`, transactionData);
-          alert('Transação criada com sucesso!');
+          toast.success('Transação criada com sucesso!');
         }
         
         cancelEditTransaction();
