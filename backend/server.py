@@ -248,6 +248,26 @@ class ContractCreate(BaseModel):
     payment_conditions: str
     installments: int
 
+class Lawyer(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    full_name: str
+    oab_number: str
+    oab_state: str  # Estado da OAB (SP, RJ, MG, etc.)
+    email: str
+    phone: str
+    specialization: Optional[str] = ""
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class LawyerCreate(BaseModel):
+    full_name: str
+    oab_number: str
+    oab_state: str
+    email: str
+    phone: str
+    specialization: Optional[str] = ""
+
 class DashboardStats(BaseModel):
     total_clients: int
     total_processes: int
