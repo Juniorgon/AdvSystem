@@ -119,6 +119,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ PASSED ALL TESTS: Client CRUD operations working perfectly. Tested individual/corporate client creation, address management, client listing, single client retrieval, client updates, and proper validation. All 7 client management tests passed successfully."
+      - working: true
+        agent: "testing"
+        comment: "✅ DELETE ENDPOINT CORRECTIONS VERIFIED: Client delete properly blocks deletion when dependencies exist (processes, contracts, financial transactions) with specific error messages in Portuguese. Message correctly lists all dependency types and counts."
         
   - task: "Process Management API"
     implemented: true
@@ -134,6 +137,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ PASSED ALL TESTS: Process management working perfectly. Tested process creation with client linking, invalid client validation (correctly returns 404), process listing, client-specific process filtering, and process updates. All 7 process management tests passed successfully."
+      - working: true
+        agent: "testing"
+        comment: "✅ DELETE ENDPOINT CORRECTIONS VERIFIED: Process delete properly blocks deletion when financial transactions are linked with specific error message in Portuguese mentioning transaction count."
         
   - task: "Financial Transaction API"
     implemented: true
@@ -149,6 +155,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ PASSED ALL TESTS: Financial transaction API working perfectly. Tested revenue/expense creation, transaction status management (pendente/pago/vencido), transaction listing, type verification, and status updates. All 6 financial transaction tests passed successfully."
+      - working: true
+        agent: "testing"
+        comment: "✅ DELETE ENDPOINT CORRECTIONS VERIFIED: Financial transaction delete properly prevents deletion of paid transactions with specific error message in Portuguese. Pending transactions can be deleted successfully."
         
   - task: "Contract Management API"
     implemented: true
@@ -164,6 +173,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ PASSED ALL TESTS: Contract management working perfectly. Tested contract creation with client linking, invalid client validation, contract listing, and client-specific contract filtering. Minor: DELETE endpoint not implemented but core functionality complete. All 6 contract management tests passed successfully."
+      - working: true
+        agent: "testing"
+        comment: "Minor: Contract DELETE endpoint still not implemented (405 Method Not Allowed). This is a minor gap but core contract functionality works perfectly."
         
   - task: "Dashboard Statistics API"
     implemented: true
@@ -179,6 +191,21 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ PASSED ALL TESTS: Dashboard statistics API working perfectly. Verified all required fields (total_clients, total_processes, total_revenue, total_expenses, pending_payments, overdue_payments, monthly_revenue, monthly_expenses), correct data types, and accurate calculations. All 7 dashboard tests passed successfully."
+
+  - task: "Lawyer Management API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented lawyer management API with admin-only access, OAB validation, and soft delete functionality"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED ALL TESTS: Lawyer management API working perfectly. Tested admin authentication, lawyer CRUD operations, OAB number validation, email uniqueness, soft delete (deactivation), and proper authorization controls. All lawyer endpoints require admin access and work correctly."
 
 frontend:
   - task: "Dashboard Interface"
