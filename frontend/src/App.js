@@ -40,6 +40,85 @@ function App() {
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Authentication State
+  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
+  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+  const [registerForm, setRegisterForm] = useState({
+    username: '',
+    email: '',
+    full_name: '',
+    password: '',
+    role: 'lawyer'
+  });
+
+  // Check authentication on component mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
+    if (token && userData) {
+      setUser(JSON.parse(userData));
+      setIsAuthenticated(true);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
+  }, []);
+
+  // Authentication functions
+  const login = async (credentials) => {
+    try {
+      const response = await axios.post(`${API}/auth/login`, credentials);
+      const { access_token, user: userData } = response.data;
+      
+      localStorage.setItem('token', access_token);
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      setUser(userData);
+      setIsAuthenticated(true);
+      setShowLogin(false);
+      
+      // Set default authorization header
+      axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+      
+      alert(`Bem-vindo, ${userData.full_name}!`);
+    } catch (error) {
+      console.error('Login error:', error);
+      alert('Erro no login. Verifique suas credenciais.');
+    }
+  };
+
+  const register = async (userData) => {
+    try {
+      await axios.post(`${API}/auth/register`, userData);
+      alert('Usuário registrado com sucesso! Faça login para continuar.');
+      setShowRegister(false);
+      setShowLogin(true);
+    } catch (error) {
+      console.error('Registration error:', error);
+      alert('Erro no registro. Tente novamente.');
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    delete axios.defaults.headers.common['Authorization'];
+    setUser(null);
+    setIsAuthenticated(false);
+    setCurrentPage('dashboard');
+  };
+
+  const handleLoginSubmit = (e) => {
+    e.preventDefault();
+    login(loginForm);
+  };
+
+  const handleRegisterSubmit = (e) => {
+    e.preventDefault();
+    register(registerForm);
+  };
+
   // Fetch dashboard data
   const fetchDashboardData = async () => {
     try {
