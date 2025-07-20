@@ -483,6 +483,7 @@ function App() {
 
   useEffect(() => {
     if (isAuthenticated) {
+      fetchBranches();
       fetchDashboardData();
       fetchClients();
       fetchProcesses();
