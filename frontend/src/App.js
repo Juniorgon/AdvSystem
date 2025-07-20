@@ -2343,10 +2343,19 @@ Testemunhas:
           await axios.delete(`${API}/financial/${transactionId}`);
           await fetchFinancialTransactions();
           await fetchDashboardData();
-          alert('Transação excluída com sucesso!');
+          toast.success('Transação excluída com sucesso!');
         } catch (error) {
           console.error('Error deleting transaction:', error);
-          alert('Erro ao excluir transação.');
+          if (error.response?.status === 400) {
+            // Show specific error message from backend
+            toast.error(error.response.data.detail);
+          } else if (error.response?.status === 404) {
+            toast.error('Transação não encontrada.');
+          } else if (error.response?.status === 403) {
+            toast.error('Você não tem permissão para excluir esta transação.');
+          } else {
+            toast.error('Erro inesperado ao excluir transação. Tente novamente.');
+          }
         } finally {
           setLoading(false);
         }
