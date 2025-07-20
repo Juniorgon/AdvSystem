@@ -1222,10 +1222,19 @@ Testemunhas:
           await axios.delete(`${API}/clients/${clientId}`);
           await fetchClients();
           await fetchDashboardData();
-          alert('Cliente excluído com sucesso!');
+          toast.success('Cliente excluído com sucesso!');
         } catch (error) {
           console.error('Error deleting client:', error);
-          alert('Erro ao excluir cliente. Verifique se não há processos vinculados.');
+          if (error.response?.status === 400) {
+            // Show specific dependency error message
+            toast.error(error.response.data.detail);
+          } else if (error.response?.status === 404) {
+            toast.error('Cliente não encontrado.');
+          } else if (error.response?.status === 403) {
+            toast.error('Você não tem permissão para excluir este cliente.');
+          } else {
+            toast.error('Erro inesperado ao excluir cliente. Tente novamente.');
+          }
         } finally {
           setLoading(false);
         }
