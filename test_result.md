@@ -257,6 +257,7 @@ test_plan:
     - "Financial Transaction API"
     - "Contract Management API"
     - "Dashboard Statistics API"
+    - "Lawyer Management API"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
