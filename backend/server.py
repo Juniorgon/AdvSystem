@@ -348,22 +348,60 @@ async def register_user(user: UserCreate):
 
 @api_router.post("/auth/login", response_model=Token)
 async def login_user(user_credentials: UserLogin):
-    user_doc = await db.users.find_one({"username": user_credentials.username})
+    # Try to find user by username or email
+    user_doc = await db.users.find_one({
+        "$or": [
+            {"username": user_credentials.username_or_email},
+            {"email": user_credentials.username_or_email}
+        ]
+    })
+    
+    # If not found in users, try to find in lawyers collection for lawyer login
+    if not user_doc:
+        lawyer_doc = await db.lawyers.find_one({"email": user_credentials.username_or_email})
+        if lawyer_doc:
+            # Verify password is the OAB number
+            if user_credentials.password == lawyer_doc['oab_number']:
+                # Create temporary user object for lawyer
+                user_dict = {
+                    "id": lawyer_doc['id'],
+                    "username": lawyer_doc['email'],
+                    "email": lawyer_doc['email'],
+                    "full_name": lawyer_doc['full_name'],
+                    "role": "lawyer",
+                    "branch_id": lawyer_doc['branch_id'],
+                    "is_active": lawyer_doc['is_active'],
+                    "created_at": lawyer_doc['created_at']
+                }
+                
+                access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+                access_token = create_access_token(
+                    data={"sub": lawyer_doc['email']}, expires_delta=access_token_expires
+                )
+                
+                user = User(**user_dict)
+                return Token(access_token=access_token, token_type="bearer", user=user)
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Para advogados, use seu email e os números da sua OAB como senha",
+                )
+    
     if not user_doc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="Usuário não encontrado",
         )
     
     user_in_db = UserInDB(**user_doc)
     if not verify_password(user_credentials.password, user_in_db.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="Senha incorreta",
         )
     
     if not user_in_db.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise HTTPException(status_code=400, detail="Usuário inativo")
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
