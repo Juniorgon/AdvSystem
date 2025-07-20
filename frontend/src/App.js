@@ -641,9 +641,10 @@ function App() {
         
         <div className="mt-4 p-3 bg-blue-900 bg-opacity-30 border border-blue-600 rounded-lg">
           <p className="text-blue-200 text-sm">
-            <strong>Usuário padrão:</strong><br/>
-            Usuário: admin<br/>
-            Senha: admin123
+            <strong>Usuários de demonstração:</strong><br/>
+            Super Admin: admin / admin123<br/>
+            Admin Caxias: admin_caxias / admin123<br/>
+            Admin Nova Prata: admin_novaprata / admin123
           </p>
         </div>
       </div>
