@@ -63,6 +63,12 @@ function App() {
     branch_id: ''
   });
 
+  // Branch State
+  const [branches, setBranches] = useState([]);
+  const [selectedBranch, setSelectedBranch] = useState(null);
+  const [showBranchDrawer, setShowBranchDrawer] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   // Check authentication on component mount
   useEffect(() => {
     const token = localStorage.getItem('token');
