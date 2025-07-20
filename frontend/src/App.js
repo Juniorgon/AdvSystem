@@ -223,6 +223,18 @@ function App() {
         'Cidade': item.address?.city,
         'Estado': item.address?.state
       }));
+    } else if (title.includes('Advogado')) {
+      processedData = data.map(item => ({
+        'Nome Completo': item.full_name,
+        'Número OAB': item.oab_number,
+        'Estado OAB': item.oab_state,
+        'OAB Completa': `${item.oab_number}/${item.oab_state}`,
+        'Email': item.email,
+        'Telefone': item.phone,
+        'Especialização': item.specialization || 'Não informado',
+        'Status': item.is_active ? 'Ativo' : 'Inativo',
+        'Data de Registro': new Date(item.created_at).toLocaleDateString('pt-BR')
+      }));
     } else if (title.includes('Processo')) {
       processedData = data.map(item => ({
         'Número do Processo': item.process_number,
