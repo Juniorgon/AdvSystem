@@ -2424,7 +2424,7 @@ Testemunhas:
           toast.success('Contrato atualizado com sucesso!');
         } else {
           await axios.post(`${API}/contracts`, contractData);
-          alert('Contrato criado com sucesso!');
+          toast.success('Contrato criado com sucesso!');
         }
         
         setShowForm(false);
