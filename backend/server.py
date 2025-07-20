@@ -290,6 +290,7 @@ class ContractCreate(BaseModel):
     value: float
     payment_conditions: str
     installments: int
+    branch_id: str  # Vinculação obrigatória com filial
 
 class Lawyer(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
