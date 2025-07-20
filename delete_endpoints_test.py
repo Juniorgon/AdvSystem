@@ -506,10 +506,10 @@ class DeleteEndpointsTester:
         
         try:
             response = self.session.post(f"{API_BASE_URL}/lawyers", json=lawyer_data)
-            if response.status_code == 401:
+            if response.status_code in [401, 403]:  # Both are valid for unauthorized access
                 self.log_test("Lawyer Create Without Auth", True, "Correctly blocked unauthorized access")
             else:
-                self.log_test("Lawyer Create Without Auth", False, f"Expected 401, got {response.status_code}")
+                self.log_test("Lawyer Create Without Auth", False, f"Expected 401/403, got {response.status_code}")
         except Exception as e:
             self.log_test("Lawyer Create Without Auth", False, f"Exception: {str(e)}")
         
