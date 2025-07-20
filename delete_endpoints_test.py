@@ -363,6 +363,9 @@ class DeleteEndpointsTester:
                 delete_response = self.session.delete(f"{API_BASE_URL}/contracts/{contract_id}")
                 if delete_response.status_code == 200:
                     self.log_test("Contract Delete", True, "Successfully deleted contract")
+                elif delete_response.status_code == 405:
+                    self.log_test("Contract Delete", False, 
+                                "DELETE endpoint not implemented for contracts (405 Method Not Allowed)")
                 else:
                     self.log_test("Contract Delete", False, 
                                 f"Expected 200, got {delete_response.status_code}: {delete_response.text}")
