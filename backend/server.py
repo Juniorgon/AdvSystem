@@ -535,6 +535,114 @@ async def get_client_contracts(client_id: str):
     contracts = await db.contracts.find({"client_id": client_id}).to_list(1000)
     return [Contract(**contract) for contract in contracts]
 
+# Lawyer endpoints (Admin only)
+@api_router.post("/lawyers", response_model=Lawyer)
+async def create_lawyer(lawyer: LawyerCreate, current_user: User = Depends(get_current_user)):
+    # Only admin can create lawyers
+    if current_user.role != UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can register lawyers"
+        )
+    
+    # Check if OAB number already exists
+    existing_lawyer = await db.lawyers.find_one({
+        "oab_number": lawyer.oab_number, 
+        "oab_state": lawyer.oab_state
+    })
+    if existing_lawyer:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Lawyer with OAB {lawyer.oab_number}/{lawyer.oab_state} already exists"
+        )
+    
+    # Check if email already exists
+    existing_email = await db.lawyers.find_one({"email": lawyer.email})
+    if existing_email:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    lawyer_dict = lawyer.dict()
+    lawyer_obj = Lawyer(**lawyer_dict)
+    await db.lawyers.insert_one(lawyer_obj.dict())
+    return lawyer_obj
+
+@api_router.get("/lawyers", response_model=List[Lawyer])
+async def get_lawyers(current_user: User = Depends(get_current_user)):
+    lawyers = await db.lawyers.find({"is_active": True}).to_list(1000)
+    return [Lawyer(**lawyer) for lawyer in lawyers]
+
+@api_router.get("/lawyers/{lawyer_id}", response_model=Lawyer)
+async def get_lawyer(lawyer_id: str, current_user: User = Depends(get_current_user)):
+    lawyer = await db.lawyers.find_one({"id": lawyer_id})
+    if lawyer is None:
+        raise HTTPException(status_code=404, detail="Lawyer not found")
+    return Lawyer(**lawyer)
+
+@api_router.put("/lawyers/{lawyer_id}", response_model=Lawyer)
+async def update_lawyer(
+    lawyer_id: str, 
+    lawyer: LawyerCreate, 
+    current_user: User = Depends(get_current_user)
+):
+    # Only admin can update lawyers
+    if current_user.role != UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can update lawyers"
+        )
+    
+    existing_lawyer = await db.lawyers.find_one({"id": lawyer_id})
+    if existing_lawyer is None:
+        raise HTTPException(status_code=404, detail="Lawyer not found")
+    
+    # Check if OAB number conflicts with other lawyers (excluding current one)
+    oab_conflict = await db.lawyers.find_one({
+        "oab_number": lawyer.oab_number,
+        "oab_state": lawyer.oab_state,
+        "id": {"$ne": lawyer_id}
+    })
+    if oab_conflict:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Another lawyer with OAB {lawyer.oab_number}/{lawyer.oab_state} already exists"
+        )
+    
+    # Check if email conflicts with other lawyers (excluding current one)
+    email_conflict = await db.lawyers.find_one({
+        "email": lawyer.email,
+        "id": {"$ne": lawyer_id}
+    })
+    if email_conflict:
+        raise HTTPException(status_code=400, detail="Email already registered by another lawyer")
+    
+    update_data = lawyer.dict()
+    update_data["updated_at"] = datetime.utcnow()
+    
+    await db.lawyers.update_one({"id": lawyer_id}, {"$set": update_data})
+    updated_lawyer = await db.lawyers.find_one({"id": lawyer_id})
+    return Lawyer(**updated_lawyer)
+
+@api_router.delete("/lawyers/{lawyer_id}")
+async def deactivate_lawyer(lawyer_id: str, current_user: User = Depends(get_current_user)):
+    # Only admin can deactivate lawyers
+    if current_user.role != UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can deactivate lawyers"
+        )
+    
+    lawyer = await db.lawyers.find_one({"id": lawyer_id})
+    if lawyer is None:
+        raise HTTPException(status_code=404, detail="Lawyer not found")
+    
+    # Soft delete - just set is_active to False
+    await db.lawyers.update_one(
+        {"id": lawyer_id}, 
+        {"$set": {"is_active": False, "updated_at": datetime.utcnow()}}
+    )
+    
+    return {"message": "Lawyer deactivated successfully"}
+
 # Dashboard endpoint
 @api_router.get("/dashboard", response_model=DashboardStats)
 async def get_dashboard_stats():
