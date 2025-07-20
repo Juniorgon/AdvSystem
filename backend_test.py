@@ -222,7 +222,8 @@ class BackendTester:
             "status": "Em Andamento",
             "value": 15000.00,
             "description": "Cobrança de honorários advocatícios",
-            "role": "creditor"
+            "role": "creditor",
+            "branch_id": self.branch_ids.get('caxias') or client_id  # Use branch_id if available
         }
         
         try:
