@@ -651,9 +651,9 @@ function App() {
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {/* Revenue vs Expenses Chart */}
-          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
+          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg card-hover animate-slideInLeft">
             <h3 className="text-lg font-semibold text-white mb-4">Receitas vs Despesas</h3>
             <div className="h-64">
               <Line data={revenueExpenseData} options={chartOptions} />
@@ -661,7 +661,7 @@ function App() {
           </div>
 
           {/* Processes Status Chart */}
-          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
+          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg card-hover animate-slideInRight">
             <h3 className="text-lg font-semibold text-white mb-4">Status dos Processos</h3>
             <div className="h-64">
               <Doughnut data={processesData} options={chartOptions} />
@@ -669,7 +669,7 @@ function App() {
           </div>
 
           {/* Financial Status Chart */}
-          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
+          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg card-hover animate-slideInLeft" style={{animationDelay: '0.2s'}}>
             <h3 className="text-lg font-semibold text-white mb-4">Status Financeiro</h3>
             <div className="h-64">
               <Bar data={financialData} options={chartOptions} />
@@ -677,7 +677,7 @@ function App() {
           </div>
 
           {/* Client Types Chart */}
-          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
+          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg card-hover animate-slideInRight" style={{animationDelay: '0.2s'}}>
             <h3 className="text-lg font-semibold text-white mb-4">Tipos de Cliente</h3>
             <div className="h-64">
               <Doughnut data={clientTypesData} options={chartOptions} />
