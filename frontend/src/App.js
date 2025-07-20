@@ -3,6 +3,11 @@ import "./App.css";
 import axios from "axios";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import html2canvas from 'html2canvas';
+import { saveAs } from 'file-saver';
+import * as XLSX from 'xlsx';
 import {
   Chart as ChartJS,
   CategoryScale,
