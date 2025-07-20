@@ -2819,9 +2819,59 @@ Testemunhas:
   return (
     <div className="min-h-screen bg-gray-900">
       <Navigation />
-      <main className="max-w-7xl mx-auto">
-        {renderCurrentPage()}
-      </main>
+      
+      {isAuthenticated ? (
+        <main className="max-w-7xl mx-auto">
+          {renderCurrentPage()}
+        </main>
+      ) : (
+        <div className="flex items-center justify-center min-h-[80vh]">
+          <div className="text-center">
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold text-white mb-4">
+                Sistema de Gestão Jurídica
+              </h1>
+              <p className="text-gray-300 text-lg">
+                GB Advocacia & N. Comin - Controle completo do seu escritório
+              </p>
+            </div>
+            
+            <div className="bg-gray-800 p-8 rounded-lg border border-gray-700 max-w-md mx-auto">
+              <h2 className="text-2xl font-semibold text-white mb-4">Bem-vindo!</h2>
+              <p className="text-gray-400 mb-6">
+                Faça login para acessar o sistema de gestão do escritório.
+              </p>
+              
+              <div className="space-y-3">
+                <button
+                  onClick={() => setShowLogin(true)}
+                  className="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-lg font-medium transition-colors"
+                >
+                  Fazer Login
+                </button>
+                <button
+                  onClick={() => setShowRegister(true)}
+                  className="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 rounded-lg font-medium transition-colors"
+                >
+                  Criar Conta
+                </button>
+              </div>
+              
+              <div className="mt-6 p-4 bg-blue-900 bg-opacity-30 border border-blue-600 rounded-lg">
+                <p className="text-blue-200 text-sm">
+                  <strong>Usuário de teste:</strong><br/>
+                  Usuário: admin<br/>
+                  Senha: admin123
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Modals */}
+      {showLogin && <LoginModal />}
+      {showRegister && <RegisterModal />}
     </div>
   );
 }
