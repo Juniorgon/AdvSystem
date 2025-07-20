@@ -83,10 +83,10 @@ function App() {
       // Set default authorization header
       axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
       
-      alert(`Bem-vindo, ${userData.full_name}!`);
+      toast.success(`Bem-vindo, ${userData.full_name}!`);
     } catch (error) {
       console.error('Login error:', error);
-      alert('Erro no login. Verifique suas credenciais.');
+      toast.error('Erro no login. Verifique suas credenciais.');
     }
   };
 
