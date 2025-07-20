@@ -1884,15 +1884,416 @@ Testemunhas:
     );
   };
 
-  const Contracts = () => (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold text-white mb-4">Contratos</h2>
-      <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-        <p className="text-gray-300">Total de contratos: {contracts.length}</p>
-        <p className="text-gray-400 mt-2">Funcionalidade em desenvolvimento...</p>
+  const Contracts = () => {
+    const [showForm, setShowForm] = useState(false);
+    const [editingContract, setEditingContract] = useState(null);
+    const [filterStatus, setFilterStatus] = useState('all');
+    const [filterClient, setFilterClient] = useState('all');
+    const [formData, setFormData] = useState({
+      client_id: '',
+      title: '',
+      description: '',
+      value: '',
+      payment_conditions: '',
+      installments: 1,
+      status: 'ativo',
+      start_date: '',
+      end_date: ''
+    });
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      try {
+        setLoading(true);
+        const contractData = {
+          ...formData,
+          value: parseFloat(formData.value),
+          installments: parseInt(formData.installments),
+          start_date: new Date(formData.start_date).toISOString(),
+          end_date: new Date(formData.end_date).toISOString()
+        };
+        
+        if (editingContract) {
+          await axios.put(`${API}/contracts/${editingContract.id}`, contractData);
+          alert('Contrato atualizado com sucesso!');
+        } else {
+          await axios.post(`${API}/contracts`, contractData);
+          alert('Contrato criado com sucesso!');
+        }
+        
+        setShowForm(false);
+        setFormData({
+          client_id: '',
+          title: '',
+          description: '',
+          value: '',
+          payment_conditions: '',
+          installments: 1,
+          status: 'ativo',
+          start_date: '',
+          end_date: ''
+        });
+        setEditingContract(null);
+        await fetchContracts();
+        await fetchDashboardData();
+      } catch (error) {
+        console.error('Error saving contract:', error);
+        alert('Erro ao salvar contrato. Verifique os dados e tente novamente.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const editContract = (contract) => {
+      setEditingContract(contract);
+      setFormData({
+        client_id: contract.client_id,
+        title: contract.title,
+        description: contract.description,
+        value: contract.value.toString(),
+        payment_conditions: contract.payment_conditions,
+        installments: contract.installments.toString(),
+        status: contract.status,
+        start_date: new Date(contract.start_date).toISOString().split('T')[0],
+        end_date: new Date(contract.end_date).toISOString().split('T')[0]
+      });
+      setShowForm(true);
+    };
+
+    const deleteContract = async (contractId) => {
+      if (window.confirm('Tem certeza que deseja excluir este contrato?')) {
+        try {
+          await axios.delete(`${API}/contracts/${contractId}`);
+          alert('Contrato excluído com sucesso!');
+          await fetchContracts();
+          await fetchDashboardData();
+        } catch (error) {
+          console.error('Error deleting contract:', error);
+          alert('Erro ao excluir contrato.');
+        }
+      }
+    };
+
+    const getClientName = (clientId) => {
+      const client = clients.find(c => c.id === clientId);
+      return client ? client.name : 'Cliente não encontrado';
+    };
+
+    const filteredContracts = contracts.filter(contract => {
+      const statusMatch = filterStatus === 'all' || contract.status === filterStatus;
+      const clientMatch = filterClient === 'all' || contract.client_id === filterClient;
+      return statusMatch && clientMatch;
+    });
+
+    const contractStats = {
+      total: contracts.length,
+      active: contracts.filter(c => c.status === 'ativo').length,
+      completed: contracts.filter(c => c.status === 'concluído').length,
+      cancelled: contracts.filter(c => c.status === 'cancelado').length,
+      totalValue: contracts.reduce((sum, c) => sum + (c.value || 0), 0),
+      averageValue: contracts.length > 0 ? contracts.reduce((sum, c) => sum + (c.value || 0), 0) / contracts.length : 0
+    };
+
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-white">Gestão de Contratos</h2>
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            Novo Contrato
+          </button>
+        </div>
+
+        {/* Contract Statistics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+            <p className="text-gray-400 text-sm">Total Contratos</p>
+            <p className="text-2xl font-bold text-white">{contractStats.total}</p>
+          </div>
+          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+            <p className="text-gray-400 text-sm">Ativos</p>
+            <p className="text-2xl font-bold text-green-400">{contractStats.active}</p>
+          </div>
+          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+            <p className="text-gray-400 text-sm">Concluídos</p>
+            <p className="text-2xl font-bold text-blue-400">{contractStats.completed}</p>
+          </div>
+          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+            <p className="text-gray-400 text-sm">Cancelados</p>
+            <p className="text-2xl font-bold text-red-400">{contractStats.cancelled}</p>
+          </div>
+          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+            <p className="text-gray-400 text-sm">Valor Total</p>
+            <p className="text-xl font-bold text-green-400">
+              R$ {contractStats.totalValue.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+            </p>
+          </div>
+          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+            <p className="text-gray-400 text-sm">Valor Médio</p>
+            <p className="text-xl font-bold text-purple-400">
+              R$ {contractStats.averageValue.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+            </p>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-1">Status</label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="all">Todos</option>
+                <option value="ativo">Ativos</option>
+                <option value="concluído">Concluídos</option>
+                <option value="cancelado">Cancelados</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-1">Cliente</label>
+              <select
+                value={filterClient}
+                onChange={(e) => setFilterClient(e.target.value)}
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="all">Todos</option>
+                {clients.map(client => (
+                  <option key={client.id} value={client.id}>{client.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Contract Form */}
+        {showForm && (
+          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
+            <h3 className="text-lg font-semibold text-white mb-4">
+              {editingContract ? 'Editar Contrato' : 'Novo Contrato'}
+            </h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Cliente</label>
+                  <select
+                    value={formData.client_id}
+                    onChange={(e) => setFormData({...formData, client_id: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  >
+                    <option value="">Selecione um cliente</option>
+                    {clients.map(client => (
+                      <option key={client.id} value={client.id}>{client.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Título do Contrato</label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-1">Descrição</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  rows="3"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Valor (R$)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.value}
+                    onChange={(e) => setFormData({...formData, value: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Parcelas</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.installments}
+                    onChange={(e) => setFormData({...formData, installments: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Status</label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({...formData, status: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="ativo">Ativo</option>
+                    <option value="concluído">Concluído</option>
+                    <option value="cancelado">Cancelado</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-1">Condições de Pagamento</label>
+                <input
+                  type="text"
+                  value={formData.payment_conditions}
+                  onChange={(e) => setFormData({...formData, payment_conditions: e.target.value})}
+                  className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  placeholder="Ex: 30% entrada + 70% em 6x"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Data de Início</label>
+                  <input
+                    type="date"
+                    value={formData.start_date}
+                    onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Data de Término</label>
+                  <input
+                    type="date"
+                    value={formData.end_date}
+                    onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForm(false);
+                    setEditingContract(null);
+                    setFormData({
+                      client_id: '',
+                      title: '',
+                      description: '',
+                      value: '',
+                      payment_conditions: '',
+                      installments: 1,
+                      status: 'ativo',
+                      start_date: '',
+                      end_date: ''
+                    });
+                  }}
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Salvando...' : editingContract ? 'Atualizar Contrato' : 'Salvar Contrato'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Contracts Table */}
+        <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-700">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">Cliente</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">Título</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">Valor</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">Parcelas</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">Status</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">Data Início</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">Data Fim</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {filteredContracts.length > 0 ? (
+                  filteredContracts.map((contract) => (
+                    <tr key={contract.id} className="hover:bg-gray-700">
+                      <td className="px-4 py-2 text-sm text-white font-medium">
+                        {getClientName(contract.client_id)}
+                      </td>
+                      <td className="px-4 py-2 text-sm text-gray-300">{contract.title}</td>
+                      <td className="px-4 py-2 text-sm text-green-400 font-medium">
+                        R$ {contract.value?.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                      </td>
+                      <td className="px-4 py-2 text-sm text-gray-300">{contract.installments}x</td>
+                      <td className="px-4 py-2 text-sm">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          contract.status === 'ativo' ? 'bg-green-100 text-green-800' :
+                          contract.status === 'concluído' ? 'bg-blue-100 text-blue-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {contract.status.charAt(0).toUpperCase() + contract.status.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-sm text-gray-300">
+                        {new Date(contract.start_date).toLocaleDateString('pt-BR')}
+                      </td>
+                      <td className="px-4 py-2 text-sm text-gray-300">
+                        {new Date(contract.end_date).toLocaleDateString('pt-BR')}
+                      </td>
+                      <td className="px-4 py-2 text-sm space-x-2">
+                        <button
+                          onClick={() => editContract(contract)}
+                          className="text-blue-400 hover:text-blue-300 transition-colors"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => deleteContract(contract.id)}
+                          className="text-red-400 hover:text-red-300 transition-colors"
+                        >
+                          Excluir
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="8" className="px-4 py-8 text-center text-gray-400">
+                      Nenhum contrato encontrado
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderCurrentPage = () => {
     switch(currentPage) {
