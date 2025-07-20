@@ -774,7 +774,7 @@ function App() {
         if (editingClient) {
           // Update existing client
           await axios.put(`${API}/clients/${editingClient.id}`, formData);
-          alert('Cliente atualizado com sucesso!');
+          toast.success('Cliente atualizado com sucesso!');
         } else {
           // Create new client
           await axios.post(`${API}/clients`, formData);
