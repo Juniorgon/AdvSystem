@@ -249,6 +249,7 @@ class FinancialTransaction(BaseModel):
     payment_date: Optional[datetime] = None
     status: TransactionStatus
     category: str
+    branch_id: str  # Vinculação obrigatória com filial
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -262,6 +263,7 @@ class FinancialTransactionCreate(BaseModel):
     payment_date: Optional[datetime] = None
     status: TransactionStatus = TransactionStatus.pendente
     category: str
+    branch_id: str  # Vinculação obrigatória com filial
 
 class FinancialTransactionUpdate(BaseModel):
     description: Optional[str] = None
