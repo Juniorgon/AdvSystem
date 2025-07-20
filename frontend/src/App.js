@@ -554,29 +554,29 @@ function App() {
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 rounded-lg border border-blue-500 shadow-lg">
+          <div className="card-gradient-blue p-6 rounded-lg shadow-lg card-hover animate-fadeIn">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-blue-100 text-sm">Total Clientes</p>
                 <p className="text-3xl font-bold text-white">{dashboardStats.total_clients || 0}</p>
                 <p className="text-blue-200 text-xs mt-1">Ativos no sistema</p>
               </div>
-              <div className="text-white text-4xl">👥</div>
+              <div className="text-white text-4xl animate-pulse">👥</div>
             </div>
           </div>
           
-          <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-6 rounded-lg border border-purple-500 shadow-lg">
+          <div className="card-gradient-purple p-6 rounded-lg shadow-lg card-hover animate-fadeIn" style={{animationDelay: '0.1s'}}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-purple-100 text-sm">Total Processos</p>
                 <p className="text-3xl font-bold text-white">{dashboardStats.total_processes || 0}</p>
                 <p className="text-purple-200 text-xs mt-1">Em acompanhamento</p>
               </div>
-              <div className="text-white text-4xl">⚖️</div>
+              <div className="text-white text-4xl animate-pulse">⚖️</div>
             </div>
           </div>
           
-          <div className="bg-gradient-to-r from-green-600 to-green-700 p-6 rounded-lg border border-green-500 shadow-lg">
+          <div className="card-gradient-green p-6 rounded-lg shadow-lg card-hover animate-fadeIn" style={{animationDelay: '0.2s'}}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-green-100 text-sm">Receita Total</p>
@@ -585,11 +585,11 @@ function App() {
                 </p>
                 <p className="text-green-200 text-xs mt-1">Acumulado</p>
               </div>
-              <div className="text-white text-4xl">📈</div>
+              <div className="text-white text-4xl animate-pulse">📈</div>
             </div>
           </div>
           
-          <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 rounded-lg border border-red-500 shadow-lg">
+          <div className="card-gradient-red p-6 rounded-lg shadow-lg card-hover animate-fadeIn" style={{animationDelay: '0.3s'}}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-red-100 text-sm">Despesas Total</p>
@@ -598,7 +598,7 @@ function App() {
                 </p>
                 <p className="text-red-200 text-xs mt-1">Acumulado</p>
               </div>
-              <div className="text-white text-4xl">📉</div>
+              <div className="text-white text-4xl animate-pulse">📉</div>
             </div>
           </div>
         </div>
