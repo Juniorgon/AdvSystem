@@ -2743,12 +2743,21 @@ Testemunhas:
       if (window.confirm('Tem certeza que deseja excluir este contrato?')) {
         try {
           await axios.delete(`${API}/contracts/${contractId}`);
-          alert('Contrato excluído com sucesso!');
+          toast.success('Contrato excluído com sucesso!');
           await fetchContracts();
           await fetchDashboardData();
         } catch (error) {
           console.error('Error deleting contract:', error);
-          alert('Erro ao excluir contrato.');
+          if (error.response?.status === 400) {
+            // Show specific error message from backend
+            toast.error(error.response.data.detail);
+          } else if (error.response?.status === 404) {
+            toast.error('Contrato não encontrado.');
+          } else if (error.response?.status === 403) {
+            toast.error('Você não tem permissão para excluir este contrato.');
+          } else {
+            toast.error('Erro inesperado ao excluir contrato. Tente novamente.');
+          }
         }
       }
     };
