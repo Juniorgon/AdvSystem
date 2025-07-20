@@ -726,8 +726,15 @@ async def create_financial_transaction(transaction: FinancialTransactionCreate):
     return transaction_obj
 
 @api_router.get("/financial", response_model=List[FinancialTransaction])
-async def get_financial_transactions():
-    transactions = await db.financial_transactions.find().to_list(1000)
+async def get_financial_transactions(current_user: User = Depends(get_current_user)):
+    # Apply branch filter
+    query = {}
+    if current_user.branch_id:
+        query["branch_id"] = current_user.branch_id
+    elif current_user.role != UserRole.admin or current_user.branch_id is not None:
+        return []
+    
+    transactions = await db.financial_transactions.find(query).to_list(1000)
     return [FinancialTransaction(**transaction) for transaction in transactions]
 
 @api_router.get("/financial/{transaction_id}", response_model=FinancialTransaction)
