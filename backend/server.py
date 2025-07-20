@@ -258,6 +258,100 @@ class DashboardStats(BaseModel):
     monthly_revenue: float
     monthly_expenses: float
 
+# Authentication endpoints
+@api_router.post("/auth/register", response_model=User)
+async def register_user(user: UserCreate):
+    # Check if user already exists
+    existing_user = await db.users.find_one({"username": user.username})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Username already registered")
+    
+    existing_email = await db.users.find_one({"email": user.email})
+    if existing_email:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Create new user
+    hashed_password = get_password_hash(user.password)
+    user_dict = user.dict()
+    del user_dict['password']
+    
+    user_in_db = UserInDB(**user_dict, hashed_password=hashed_password)
+    await db.users.insert_one(user_in_db.dict())
+    
+    return User(**user_dict)
+
+@api_router.post("/auth/login", response_model=Token)
+async def login_user(user_credentials: UserLogin):
+    user_doc = await db.users.find_one({"username": user_credentials.username})
+    if not user_doc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+        )
+    
+    user_in_db = UserInDB(**user_doc)
+    if not verify_password(user_credentials.password, user_in_db.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+        )
+    
+    if not user_in_db.is_active:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user_in_db.username}, expires_delta=access_token_expires
+    )
+    
+    user = User(**{k: v for k, v in user_in_db.dict().items() if k != 'hashed_password'})
+    return Token(access_token=access_token, token_type="bearer", user=user)
+
+@api_router.get("/auth/me", response_model=User)
+async def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+@api_router.get("/auth/users", response_model=List[User])
+async def get_all_users(current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions"
+        )
+    
+    users_cursor = db.users.find()
+    users = []
+    async for user_doc in users_cursor:
+        user = User(**{k: v for k, v in user_doc.items() if k != 'hashed_password'})
+        users.append(user)
+    
+    return users
+
+@api_router.post("/auth/create-admin")
+async def create_admin_user():
+    # Check if admin already exists
+    existing_admin = await db.users.find_one({"role": "admin"})
+    if existing_admin:
+        raise HTTPException(status_code=400, detail="Admin user already exists")
+    
+    # Create default admin user
+    admin_user = UserCreate(
+        username="admin",
+        email="admin@gbadvocacia.com",
+        full_name="Administrador GB Advocacia",
+        password="admin123",
+        role=UserRole.admin
+    )
+    
+    hashed_password = get_password_hash(admin_user.password)
+    user_dict = admin_user.dict()
+    del user_dict['password']
+    
+    user_in_db = UserInDB(**user_dict, hashed_password=hashed_password)
+    await db.users.insert_one(user_in_db.dict())
+    
+    return {"message": "Admin user created successfully", "username": "admin", "password": "admin123"}
+
 # Client endpoints
 @api_router.post("/clients", response_model=Client)
 async def create_client(client: ClientCreate):
