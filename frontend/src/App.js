@@ -91,8 +91,7 @@ function App() {
       
       toast.success(`Bem-vindo, ${userData.full_name}!`);
     } catch (error) {
-      console.error('Login error:', error);
-      toast.error('Erro no login. Verifique suas credenciais.');
+      handleApiError(error, 'Erro no login. Verifique suas credenciais.');
     }
   };
 
