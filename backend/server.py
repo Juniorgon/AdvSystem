@@ -933,31 +933,42 @@ async def deactivate_lawyer(lawyer_id: str, current_user: User = Depends(get_cur
 
 # Dashboard endpoint
 @api_router.get("/dashboard", response_model=DashboardStats)
-async def get_dashboard_stats():
-    # Count totals
-    total_clients = await db.clients.count_documents({})
-    total_processes = await db.processes.count_documents({})
+async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
+    # Apply branch filter
+    branch_filter = {}
+    if current_user.branch_id:
+        branch_filter["branch_id"] = current_user.branch_id
+    elif current_user.role != UserRole.admin or current_user.branch_id is not None:
+        # Non-admin or branch-restricted users get empty stats
+        return DashboardStats(
+            total_clients=0, total_processes=0, total_revenue=0, total_expenses=0,
+            pending_payments=0, overdue_payments=0, monthly_revenue=0, monthly_expenses=0
+        )
     
-    # Calculate financial totals
+    # Count totals with branch filter
+    total_clients = await db.clients.count_documents(branch_filter)
+    total_processes = await db.processes.count_documents(branch_filter)
+    
+    # Calculate financial totals with branch filter
     revenue_pipeline = [
-        {"$match": {"type": "receita"}},
+        {"$match": {**branch_filter, "type": "receita"}},
         {"$group": {"_id": None, "total": {"$sum": "$value"}}}
     ]
     revenue_result = await db.financial_transactions.aggregate(revenue_pipeline).to_list(1)
     total_revenue = revenue_result[0]["total"] if revenue_result else 0
     
     expenses_pipeline = [
-        {"$match": {"type": "despesa"}},
+        {"$match": {**branch_filter, "type": "despesa"}},
         {"$group": {"_id": None, "total": {"$sum": "$value"}}}
     ]
     expenses_result = await db.financial_transactions.aggregate(expenses_pipeline).to_list(1)
     total_expenses = expenses_result[0]["total"] if expenses_result else 0
     
-    # Count pending and overdue payments
-    pending_payments = await db.financial_transactions.count_documents({"status": "pendente"})
-    overdue_payments = await db.financial_transactions.count_documents({"status": "vencido"})
+    # Count pending and overdue payments with branch filter
+    pending_payments = await db.financial_transactions.count_documents({**branch_filter, "status": "pendente"})
+    overdue_payments = await db.financial_transactions.count_documents({**branch_filter, "status": "vencido"})
     
-    # Calculate monthly revenue and expenses (current month)
+    # Calculate monthly revenue and expenses (current month) with branch filter
     from datetime import datetime, timedelta
     current_month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     next_month_start = current_month_start + timedelta(days=32)
@@ -965,6 +976,7 @@ async def get_dashboard_stats():
     
     monthly_revenue_pipeline = [
         {"$match": {
+            **branch_filter,
             "type": "receita",
             "due_date": {"$gte": current_month_start, "$lt": next_month_start}
         }},
@@ -975,6 +987,7 @@ async def get_dashboard_stats():
     
     monthly_expenses_pipeline = [
         {"$match": {
+            **branch_filter,
             "type": "despesa",
             "due_date": {"$gte": current_month_start, "$lt": next_month_start}
         }},
