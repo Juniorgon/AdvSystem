@@ -612,10 +612,10 @@ function App() {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 w-full max-w-md">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold text-white">Login</h3>
+          <h3 className="text-xl font-semibold text-white">🔐 Login</h3>
           <button
             onClick={() => setShowLogin(false)}
-            className="text-gray-400 hover:text-white"
+            className="text-gray-400 hover:text-white text-xl"
           >
             ✕
           </button>
@@ -623,29 +623,38 @@ function App() {
         
         <form onSubmit={handleLoginSubmit} className="space-y-4">
           <div>
-            <label className="block text-gray-300 text-sm font-medium mb-1">Email ou Usuário</label>
+            <label className="block text-gray-300 text-sm font-medium mb-1">
+              📧 Email ou Usuário
+            </label>
             <input
               type="text"
+              name="username_or_email"
               value={loginForm.username_or_email}
               onChange={(e) => setLoginForm({...loginForm, username_or_email: e.target.value})}
-              className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               placeholder="Digite seu email ou nome de usuário"
+              autoComplete="username"
               required
             />
           </div>
           
           <div>
-            <label className="block text-gray-300 text-sm font-medium mb-1">Senha</label>
+            <label className="block text-gray-300 text-sm font-medium mb-1">
+              🔑 Senha
+            </label>
             <input
               type="password"
+              name="password"
               value={loginForm.password}
               onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
-              className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="Digite sua senha"
+              autoComplete="current-password"
               required
             />
           </div>
           
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end space-x-2 pt-2">
             <button
               type="button"
               onClick={() => setShowLogin(false)}
@@ -655,19 +664,20 @@ function App() {
             </button>
             <button
               type="submit"
-              className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors"
+              className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors font-medium"
             >
-              Entrar
+              🚀 Entrar
             </button>
           </div>
         </form>
         
-        <div className="mt-4 p-3 bg-blue-900 bg-opacity-30 border border-blue-600 rounded-lg">
+        <div className="mt-6 p-4 bg-blue-900 bg-opacity-30 border border-blue-600 rounded-lg">
           <p className="text-blue-200 text-sm">
-            <strong>Usuários de demonstração:</strong><br/>
-            Super Admin: admin / admin123<br/>
-            Admin Caxias: admin_caxias / admin123<br/>
-            Admin Nova Prata: admin_novaprata / admin123
+            <strong>🎯 Usuários de demonstração:</strong><br/>
+            <strong>Super Admin:</strong> admin / admin123<br/>
+            <strong>Admin Caxias:</strong> admin_caxias / admin123<br/>
+            <strong>Admin Nova Prata:</strong> admin_novaprata / admin123<br/>
+            <strong>Advogados:</strong> email / números OAB
           </p>
         </div>
       </div>
