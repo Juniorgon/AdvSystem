@@ -357,6 +357,16 @@ function App() {
     }
   };
 
+  // Fetch lawyers
+  const fetchLawyers = async () => {
+    try {
+      const response = await axios.get(`${API}/lawyers`);
+      setLawyers(response.data);
+    } catch (error) {
+      console.error('Error fetching lawyers:', error);
+    }
+  };
+
   useEffect(() => {
     fetchDashboardData();
     fetchClients();
