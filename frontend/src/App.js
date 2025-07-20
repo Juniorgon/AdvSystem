@@ -154,6 +154,15 @@ function App() {
           item.address?.city || '',
           item.phone
         ]);
+      } else if (title.includes('Advogado')) {
+        columns = ['Nome', 'OAB', 'Email', 'Telefone', 'Especialização'];
+        rows = data.map(item => [
+          item.full_name,
+          `${item.oab_number}/${item.oab_state}`,
+          item.email,
+          item.phone,
+          item.specialization || 'Não informado'
+        ]);
       } else if (title.includes('Processo')) {
         columns = ['Número', 'Tipo', 'Cliente', 'Status', 'Valor'];
         rows = data.map(item => [
