@@ -596,6 +596,22 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+@app.on_event("startup")
+async def startup_event():
+    # Create default admin user if it doesn't exist
+    existing_admin = await db.users.find_one({"role": "admin"})
+    if not existing_admin:
+        admin_user = UserInDB(
+            username="admin",
+            email="admin@gbadvocacia.com",
+            full_name="Administrador GB Advocacia",
+            role=UserRole.admin,
+            hashed_password=get_password_hash("admin123"),
+            is_active=True
+        )
+        await db.users.insert_one(admin_user.dict())
+        logger.info("Default admin user created: username=admin, password=admin123")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
