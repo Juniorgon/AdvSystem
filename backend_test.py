@@ -467,7 +467,8 @@ class BackendTester:
             "client_id": "invalid-client-id",
             "value": 10000.00,
             "payment_conditions": "Pagamento à vista",
-            "installments": 1
+            "installments": 1,
+            "branch_id": self.branch_ids.get('caxias') or "some-branch-id"
         }
         
         try:
