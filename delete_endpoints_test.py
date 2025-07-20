@@ -449,9 +449,9 @@ class DeleteEndpointsTester:
             lawyer_id = self.created_entities['lawyers'][0]
             update_data = {
                 "full_name": "Dr. Carlos Eduardo Silva Junior",
-                "oab_number": "123456",
+                "oab_number": random_oab,  # Keep same OAB
                 "oab_state": "SP",
-                "email": "carlos.silva.jr@teste.com",
+                "email": f"carlos.silva.jr.{random_oab}@teste.com",  # Use unique email
                 "phone": "(11) 99999-3333",
                 "specialization": "Direito Civil e Empresarial"
             }
