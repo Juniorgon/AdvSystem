@@ -980,56 +980,56 @@ async def startup_event():
     existing_branches = await db.branches.count_documents({})
     if existing_branches == 0:
         # Create default branches
-        filial_sp = Branch(
-            name="GB Advocacia & N. Comin - São Paulo",
+        filial_caxias = Branch(
+            name="GB Advocacia & N. Comin - Caxias do Sul",
             cnpj="12.345.678/0001-90",
-            address="Rua das Flores, 123 - Centro, São Paulo - SP",
-            phone="(11) 3456-7890",
-            email="saopaulo@gbadvocacia.com",
+            address="Rua Os Dezoito do Forte, 1234 - Centro, Caxias do Sul - RS",
+            phone="(54) 3456-7890",
+            email="caxias@gbadvocacia.com",
             responsible="Dr. Gustavo Batista"
         )
         
-        filial_rj = Branch(
-            name="GB Advocacia & N. Comin - Rio de Janeiro",
+        filial_nova_prata = Branch(
+            name="GB Advocacia & N. Comin - Nova Prata",
             cnpj="12.345.678/0002-01",
-            address="Avenida Copacabana, 456 - Copacabana, Rio de Janeiro - RJ",
-            phone="(21) 3456-7890",
-            email="riodejaneiro@gbadvocacia.com",
+            address="Rua General Osório, 567 - Centro, Nova Prata - RS",
+            phone="(54) 3242-1234",
+            email="novaprata@gbadvocacia.com",
             responsible="Dra. Natália Comin"
         )
         
-        await db.branches.insert_one(filial_sp.dict())
-        await db.branches.insert_one(filial_rj.dict())
+        await db.branches.insert_one(filial_caxias.dict())
+        await db.branches.insert_one(filial_nova_prata.dict())
         
-        logger.info("Default branches created: São Paulo and Rio de Janeiro")
+        logger.info("Default branches created: Caxias do Sul and Nova Prata")
         
         # Create admin users for each branch
-        admin_sp = UserInDB(
-            username="admin_sp",
-            email="admin.sp@gbadvocacia.com",
-            full_name="Administrador São Paulo",
+        admin_caxias = UserInDB(
+            username="admin_caxias",
+            email="admin.caxias@gbadvocacia.com",
+            full_name="Administrador Caxias do Sul",
             role=UserRole.admin,
-            branch_id=filial_sp.id,
+            branch_id=filial_caxias.id,
             hashed_password=get_password_hash("admin123"),
             is_active=True
         )
         
-        admin_rj = UserInDB(
-            username="admin_rj",
-            email="admin.rj@gbadvocacia.com",
-            full_name="Administrador Rio de Janeiro",
+        admin_nova_prata = UserInDB(
+            username="admin_novaprata",
+            email="admin.novaprata@gbadvocacia.com",
+            full_name="Administrador Nova Prata",
             role=UserRole.admin,
-            branch_id=filial_rj.id,
+            branch_id=filial_nova_prata.id,
             hashed_password=get_password_hash("admin123"),
             is_active=True
         )
         
-        await db.users.insert_one(admin_sp.dict())
-        await db.users.insert_one(admin_rj.dict())
+        await db.users.insert_one(admin_caxias.dict())
+        await db.users.insert_one(admin_nova_prata.dict())
         
         logger.info("Branch administrators created:")
-        logger.info("SP Admin: username=admin_sp, password=admin123")
-        logger.info("RJ Admin: username=admin_rj, password=admin123")
+        logger.info("Caxias Admin: username=admin_caxias, password=admin123")
+        logger.info("Nova Prata Admin: username=admin_novaprata, password=admin123")
     
     # Create super admin (without branch) if it doesn't exist
     existing_super_admin = await db.users.find_one({"username": "admin", "branch_id": None})
