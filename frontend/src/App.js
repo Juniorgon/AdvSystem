@@ -202,6 +202,25 @@ function App() {
     register(registerForm);
   };
 
+  // Clear login form when modal is closed
+  const closeLoginModal = () => {
+    setShowLogin(false);
+    setLoginForm({ username_or_email: '', password: '' });
+  };
+
+  // Clear register form when modal is closed
+  const closeRegisterModal = () => {
+    setShowRegister(false);
+    setRegisterForm({
+      username: '',
+      email: '',
+      full_name: '',
+      password: '',
+      role: 'lawyer',
+      branch_id: ''
+    });
+  };
+
   // Generic error handler for better user feedback
   const handleApiError = (error, defaultMessage) => {
     console.error('API Error:', error);
