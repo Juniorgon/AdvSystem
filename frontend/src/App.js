@@ -137,6 +137,9 @@ function App() {
       // Set default authorization header
       axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
       
+      // Fetch branches and auto-select user's branch
+      await fetchBranches();
+      
       toast.success(`Bem-vindo, ${userData.full_name}!`);
     } catch (error) {
       handleApiError(error, 'Erro no login. Verifique suas credenciais.');
