@@ -903,6 +903,8 @@ class BackendTester:
             self.cleanup_multi_branch_data()
         
         return self.test_results
+    
+    def cleanup_test_data(self):
         """Clean up created test data"""
         print("\n=== Cleaning Up Test Data ===")
         
