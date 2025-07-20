@@ -59,7 +59,8 @@ function App() {
     email: '',
     full_name: '',
     password: '',
-    role: 'lawyer'
+    role: 'lawyer',
+    branch_id: ''
   });
 
   // Check authentication on component mount
