@@ -4056,9 +4056,11 @@ Testemunhas:
               
               <div className="mt-6 p-4 bg-blue-900 bg-opacity-30 border border-blue-600 rounded-lg">
                 <p className="text-blue-200 text-sm">
-                  <strong>Usuário de teste:</strong><br/>
-                  Usuário: admin<br/>
-                  Senha: admin123
+                  <strong>Usuários de demonstração:</strong><br/>
+                  <strong>Super Admin:</strong> admin / admin123<br/>
+                  <strong>Admin Caxias:</strong> admin_caxias / admin123<br/>
+                  <strong>Admin Nova Prata:</strong> admin_novaprata / admin123<br/>
+                  <strong>Advogados:</strong> email / números OAB
                 </p>
               </div>
             </div>
