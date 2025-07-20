@@ -849,7 +849,14 @@ async def create_lawyer(lawyer: LawyerCreate, current_user: User = Depends(get_c
 
 @api_router.get("/lawyers", response_model=List[Lawyer])
 async def get_lawyers(current_user: User = Depends(get_current_user)):
-    lawyers = await db.lawyers.find({"is_active": True}).to_list(1000)
+    # Apply branch filter
+    query = {"is_active": True}
+    if current_user.branch_id:
+        query["branch_id"] = current_user.branch_id
+    elif current_user.role != UserRole.admin or current_user.branch_id is not None:
+        return []
+    
+    lawyers = await db.lawyers.find(query).to_list(1000)
     return [Lawyer(**lawyer) for lawyer in lawyers]
 
 @api_router.get("/lawyers/{lawyer_id}", response_model=Lawyer)
