@@ -955,19 +955,75 @@ logger = logging.getLogger(__name__)
 
 @app.on_event("startup")
 async def startup_event():
-    # Create default admin user if it doesn't exist
-    existing_admin = await db.users.find_one({"role": "admin"})
-    if not existing_admin:
-        admin_user = UserInDB(
-            username="admin",
-            email="admin@gbadvocacia.com",
-            full_name="Administrador GB Advocacia",
+    # Create default branches if they don't exist
+    existing_branches = await db.branches.count_documents({})
+    if existing_branches == 0:
+        # Create default branches
+        filial_sp = Branch(
+            name="GB Advocacia & N. Comin - São Paulo",
+            cnpj="12.345.678/0001-90",
+            address="Rua das Flores, 123 - Centro, São Paulo - SP",
+            phone="(11) 3456-7890",
+            email="saopaulo@gbadvocacia.com",
+            responsible="Dr. Gustavo Batista"
+        )
+        
+        filial_rj = Branch(
+            name="GB Advocacia & N. Comin - Rio de Janeiro",
+            cnpj="12.345.678/0002-01",
+            address="Avenida Copacabana, 456 - Copacabana, Rio de Janeiro - RJ",
+            phone="(21) 3456-7890",
+            email="riodejaneiro@gbadvocacia.com",
+            responsible="Dra. Natália Comin"
+        )
+        
+        await db.branches.insert_one(filial_sp.dict())
+        await db.branches.insert_one(filial_rj.dict())
+        
+        logger.info("Default branches created: São Paulo and Rio de Janeiro")
+        
+        # Create admin users for each branch
+        admin_sp = UserInDB(
+            username="admin_sp",
+            email="admin.sp@gbadvocacia.com",
+            full_name="Administrador São Paulo",
             role=UserRole.admin,
+            branch_id=filial_sp.id,
             hashed_password=get_password_hash("admin123"),
             is_active=True
         )
-        await db.users.insert_one(admin_user.dict())
-        logger.info("Default admin user created: username=admin, password=admin123")
+        
+        admin_rj = UserInDB(
+            username="admin_rj",
+            email="admin.rj@gbadvocacia.com",
+            full_name="Administrador Rio de Janeiro",
+            role=UserRole.admin,
+            branch_id=filial_rj.id,
+            hashed_password=get_password_hash("admin123"),
+            is_active=True
+        )
+        
+        await db.users.insert_one(admin_sp.dict())
+        await db.users.insert_one(admin_rj.dict())
+        
+        logger.info("Branch administrators created:")
+        logger.info("SP Admin: username=admin_sp, password=admin123")
+        logger.info("RJ Admin: username=admin_rj, password=admin123")
+    
+    # Create super admin (without branch) if it doesn't exist
+    existing_super_admin = await db.users.find_one({"username": "admin", "branch_id": None})
+    if not existing_super_admin:
+        super_admin_user = UserInDB(
+            username="admin",
+            email="admin@gbadvocacia.com",
+            full_name="Super Administrador GB Advocacia",
+            role=UserRole.admin,
+            branch_id=None,  # Super admin has no branch restriction
+            hashed_password=get_password_hash("admin123"),
+            is_active=True
+        )
+        await db.users.insert_one(super_admin_user.dict())
+        logger.info("Super admin user created: username=admin, password=admin123")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
