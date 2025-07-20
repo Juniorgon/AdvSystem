@@ -284,22 +284,25 @@ class DeleteEndpointsTester:
             self.log_test("Delete Pending Transaction", False, f"Exception: {str(e)}")
         
         # Test deleting paid transaction (should be blocked)
-        paid_transaction_id = self.created_entities['financial_transactions'][1]
-        try:
-            response = self.session.delete(f"{API_BASE_URL}/financial/{paid_transaction_id}")
-            if response.status_code == 400:
-                error_message = response.json().get('detail', '')
-                if 'pago' in error_message.lower() or 'paid' in error_message.lower():
-                    self.log_test("Delete Paid Transaction Block", True, 
-                                f"Correctly blocked paid transaction deletion: {error_message}")
+        if len(self.created_entities['financial_transactions']) > 0:
+            paid_transaction_id = self.created_entities['financial_transactions'][0]  # Now the first remaining one
+            try:
+                response = self.session.delete(f"{API_BASE_URL}/financial/{paid_transaction_id}")
+                if response.status_code == 400:
+                    error_message = response.json().get('detail', '')
+                    if 'pago' in error_message.lower() or 'paid' in error_message.lower():
+                        self.log_test("Delete Paid Transaction Block", True, 
+                                    f"Correctly blocked paid transaction deletion: {error_message}")
+                    else:
+                        self.log_test("Delete Paid Transaction Block", False, 
+                                    f"Error message not specific about paid status: {error_message}")
                 else:
                     self.log_test("Delete Paid Transaction Block", False, 
-                                f"Error message not specific about paid status: {error_message}")
-            else:
-                self.log_test("Delete Paid Transaction Block", False, 
-                            f"Expected 400 status, got {response.status_code}")
-        except Exception as e:
-            self.log_test("Delete Paid Transaction Block", False, f"Exception: {str(e)}")
+                                f"Expected 400 status, got {response.status_code}")
+            except Exception as e:
+                self.log_test("Delete Paid Transaction Block", False, f"Exception: {str(e)}")
+        else:
+            self.log_test("Delete Paid Transaction Block", False, "No paid transaction available for testing")
     
     def test_process_delete_with_financial_transactions(self):
         """Test DELETE /api/processes/{process_id} with linked financial transactions"""
