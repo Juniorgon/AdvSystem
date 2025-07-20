@@ -456,6 +456,83 @@ async def create_admin_user():
     
     return {"message": "Admin user created successfully", "username": "admin", "password": "admin123"}
 
+# Branch endpoints
+@api_router.post("/branches", response_model=Branch)
+async def create_branch(branch: BranchCreate, current_user: User = Depends(get_current_user)):
+    # Only admin can create branches
+    if current_user.role != UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can create branches"
+        )
+    
+    # Check if CNPJ already exists
+    existing_branch = await db.branches.find_one({"cnpj": branch.cnpj})
+    if existing_branch:
+        raise HTTPException(status_code=400, detail="Branch with this CNPJ already exists")
+    
+    branch_dict = branch.dict()
+    branch_obj = Branch(**branch_dict)
+    await db.branches.insert_one(branch_obj.dict())
+    return branch_obj
+
+@api_router.get("/branches", response_model=List[Branch])
+async def get_branches(current_user: User = Depends(get_current_user)):
+    # Super admin can see all branches, regular admin/lawyer can only see their own
+    if current_user.role == UserRole.admin and not current_user.branch_id:
+        # Super admin without branch_id can see all
+        branches = await db.branches.find({"is_active": True}).to_list(1000)
+    elif current_user.branch_id:
+        # User with branch_id can only see their branch
+        branches = await db.branches.find({
+            "id": current_user.branch_id, 
+            "is_active": True
+        }).to_list(1000)
+    else:
+        # Default: see all active branches
+        branches = await db.branches.find({"is_active": True}).to_list(1000)
+    
+    return [Branch(**branch) for branch in branches]
+
+@api_router.get("/branches/{branch_id}", response_model=Branch)
+async def get_branch(branch_id: str, current_user: User = Depends(get_current_user)):
+    branch = await db.branches.find_one({"id": branch_id})
+    if branch is None:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    return Branch(**branch)
+
+@api_router.put("/branches/{branch_id}", response_model=Branch)
+async def update_branch(
+    branch_id: str, 
+    branch: BranchCreate, 
+    current_user: User = Depends(get_current_user)
+):
+    # Only admin can update branches
+    if current_user.role != UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can update branches"
+        )
+    
+    existing_branch = await db.branches.find_one({"id": branch_id})
+    if existing_branch is None:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    
+    # Check if CNPJ conflicts with other branches
+    cnpj_conflict = await db.branches.find_one({
+        "cnpj": branch.cnpj,
+        "id": {"$ne": branch_id}
+    })
+    if cnpj_conflict:
+        raise HTTPException(status_code=400, detail="Another branch with this CNPJ already exists")
+    
+    update_data = branch.dict()
+    update_data["updated_at"] = datetime.utcnow()
+    
+    await db.branches.update_one({"id": branch_id}, {"$set": update_data})
+    updated_branch = await db.branches.find_one({"id": branch_id})
+    return Branch(**updated_branch)
+
 # Client endpoints
 @api_router.post("/clients", response_model=Client)
 async def create_client(client: ClientCreate):
