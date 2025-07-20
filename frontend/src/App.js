@@ -2027,7 +2027,7 @@ Testemunhas:
         
         if (editingTransaction) {
           await axios.put(`${API}/financial/${editingTransaction.id}`, transactionData);
-          alert('Transação atualizada com sucesso!');
+          toast.success('Transação atualizada com sucesso!');
         } else {
           await axios.post(`${API}/financial`, transactionData);
           alert('Transação criada com sucesso!');
