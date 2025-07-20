@@ -55,6 +55,25 @@ class BackendTester:
         """Test Client Management API - CRUD operations with address management"""
         print("\n=== Testing Client Management API ===")
         
+        # Get a branch_id for client creation (use Caxias branch if available)
+        branch_id = self.branch_ids.get('caxias') if self.branch_ids else None
+        if not branch_id:
+            # Try to get branches and use the first one
+            try:
+                if 'super_admin' in self.auth_tokens:
+                    response = self.session.get(f"{API_BASE_URL}/branches", 
+                                              headers={'Authorization': f'Bearer {self.auth_tokens["super_admin"]}'})
+                    if response.status_code == 200:
+                        branches = response.json()
+                        if branches:
+                            branch_id = branches[0]['id']
+            except:
+                pass
+        
+        if not branch_id:
+            self.log_test("Client Management Prerequisites", False, "No branch_id available for client creation")
+            return
+        
         # Test 1: Create Individual Client
         individual_client_data = {
             "name": "Maria Silva Santos",
@@ -71,7 +90,8 @@ class BackendTester:
                 "complement": "Apto 45"
             },
             "phone": "(11) 99999-1234",
-            "client_type": "individual"
+            "client_type": "individual",
+            "branch_id": branch_id
         }
         
         try:
