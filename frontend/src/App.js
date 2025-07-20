@@ -93,12 +93,12 @@ function App() {
   const register = async (userData) => {
     try {
       await axios.post(`${API}/auth/register`, userData);
-      alert('Usuário registrado com sucesso! Faça login para continuar.');
+      toast.success('Usuário registrado com sucesso! Faça login para continuar.');
       setShowRegister(false);
       setShowLogin(true);
     } catch (error) {
       console.error('Registration error:', error);
-      alert('Erro no registro. Tente novamente.');
+      toast.error('Erro no registro. Tente novamente.');
     }
   };
 
