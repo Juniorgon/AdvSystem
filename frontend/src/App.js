@@ -160,9 +160,12 @@ function App() {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('selectedBranch');
     delete axios.defaults.headers.common['Authorization'];
     setUser(null);
     setIsAuthenticated(false);
+    setSelectedBranch(null);
+    setBranches([]);
     setCurrentPage('dashboard');
   };
 
