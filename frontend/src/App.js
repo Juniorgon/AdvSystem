@@ -126,6 +126,186 @@ function App() {
     register(registerForm);
   };
 
+  // Export Functions
+  const exportToPDF = async (data, title, filename) => {
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(20);
+    doc.text(title, 20, 20);
+    
+    // Add company info
+    doc.setFontSize(12);
+    doc.text('GB Advocacia & N. Comin', 20, 35);
+    doc.text(`Relatório gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 20, 45);
+    
+    // Add table based on data type
+    if (data.length > 0) {
+      let columns = [];
+      let rows = [];
+      
+      if (title.includes('Cliente')) {
+        columns = ['Nome', 'Tipo', 'CPF/CNPJ', 'Cidade', 'Telefone'];
+        rows = data.map(item => [
+          item.name,
+          item.client_type === 'individual' ? 'Pessoa Física' : 'Pessoa Jurídica',
+          item.cpf,
+          item.address?.city || '',
+          item.phone
+        ]);
+      } else if (title.includes('Processo')) {
+        columns = ['Número', 'Tipo', 'Cliente', 'Status', 'Valor'];
+        rows = data.map(item => [
+          item.process_number,
+          item.type,
+          clients.find(c => c.id === item.client_id)?.name || '',
+          item.status,
+          `R$ ${item.value?.toLocaleString('pt-BR', {minimumFractionDigits: 2}) || '0,00'}`
+        ]);
+      } else if (title.includes('Financeiro')) {
+        columns = ['Tipo', 'Descrição', 'Valor', 'Status', 'Vencimento'];
+        rows = data.map(item => [
+          item.type === 'receita' ? 'Receita' : 'Despesa',
+          item.description,
+          `R$ ${item.value?.toLocaleString('pt-BR', {minimumFractionDigits: 2}) || '0,00'}`,
+          item.status,
+          new Date(item.due_date).toLocaleDateString('pt-BR')
+        ]);
+      } else if (title.includes('Contrato')) {
+        columns = ['Cliente', 'Título', 'Valor', 'Status', 'Parcelas'];
+        rows = data.map(item => [
+          clients.find(c => c.id === item.client_id)?.name || '',
+          item.title,
+          `R$ ${item.value?.toLocaleString('pt-BR', {minimumFractionDigits: 2}) || '0,00'}`,
+          item.status,
+          `${item.installments}x`
+        ]);
+      }
+      
+      doc.autoTable({
+        startY: 60,
+        head: [columns],
+        body: rows,
+        theme: 'striped',
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [234, 88, 12] }
+      });
+    }
+    
+    doc.save(filename);
+    toast.success('Relatório PDF gerado com sucesso!');
+  };
+
+  const exportToExcel = (data, title, filename) => {
+    let processedData = [];
+    
+    if (title.includes('Cliente')) {
+      processedData = data.map(item => ({
+        'Nome': item.name,
+        'Tipo': item.client_type === 'individual' ? 'Pessoa Física' : 'Pessoa Jurídica',
+        'CPF/CNPJ': item.cpf,
+        'Nacionalidade': item.nationality,
+        'Estado Civil': item.civil_status,
+        'Profissão': item.profession,
+        'Telefone': item.phone,
+        'Rua': item.address?.street,
+        'Número': item.address?.number,
+        'Cidade': item.address?.city,
+        'Estado': item.address?.state
+      }));
+    } else if (title.includes('Processo')) {
+      processedData = data.map(item => ({
+        'Número do Processo': item.process_number,
+        'Tipo': item.type,
+        'Cliente': clients.find(c => c.id === item.client_id)?.name || '',
+        'Status': item.status,
+        'Valor': item.value,
+        'Descrição': item.description,
+        'Posição': item.role === 'creditor' ? 'Credor' : 'Devedor'
+      }));
+    } else if (title.includes('Financeiro')) {
+      processedData = data.map(item => ({
+        'Tipo': item.type === 'receita' ? 'Receita' : 'Despesa',
+        'Descrição': item.description,
+        'Valor': item.value,
+        'Status': item.status,
+        'Categoria': item.category,
+        'Vencimento': new Date(item.due_date).toLocaleDateString('pt-BR')
+      }));
+    } else if (title.includes('Contrato')) {
+      processedData = data.map(item => ({
+        'Cliente': clients.find(c => c.id === item.client_id)?.name || '',
+        'Título': item.title,
+        'Descrição': item.description,
+        'Valor': item.value,
+        'Parcelas': item.installments,
+        'Status': item.status,
+        'Condições de Pagamento': item.payment_conditions,
+        'Data Início': new Date(item.start_date).toLocaleDateString('pt-BR'),
+        'Data Fim': new Date(item.end_date).toLocaleDateString('pt-BR')
+      }));
+    }
+    
+    const ws = XLSX.utils.json_to_sheet(processedData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, title);
+    XLSX.writeFile(wb, filename);
+    toast.success('Relatório Excel gerado com sucesso!');
+  };
+
+  const exportDashboardToPDF = async () => {
+    try {
+      const dashboardElement = document.querySelector('.dashboard-export');
+      if (!dashboardElement) {
+        toast.error('Erro ao capturar dashboard');
+        return;
+      }
+      
+      const canvas = await html2canvas(dashboardElement);
+      const imgData = canvas.toDataURL('image/png');
+      
+      const doc = new jsPDF('l', 'mm', 'a4'); // landscape
+      const imgWidth = 280;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      doc.addImage(imgData, 'PNG', 10, 20, imgWidth, imgHeight);
+      doc.setFontSize(16);
+      doc.text('Dashboard - GB Advocacia & N. Comin', 10, 15);
+      doc.setFontSize(10);
+      doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 10, 10);
+      
+      doc.save('dashboard-gb-advocacia.pdf');
+      toast.success('Dashboard exportado com sucesso!');
+    } catch (error) {
+      console.error('Error exporting dashboard:', error);
+      toast.error('Erro ao exportar dashboard');
+    }
+  };
+
+  const backupData = async () => {
+    try {
+      const backupData = {
+        clients: clients,
+        processes: processes,
+        financial_transactions: financialTransactions,
+        contracts: contracts,
+        dashboard_stats: dashboardStats,
+        export_date: new Date().toISOString(),
+        version: "1.0"
+      };
+      
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], {
+        type: 'application/json'
+      });
+      
+      saveAs(blob, `backup-gb-advocacia-${new Date().toISOString().split('T')[0]}.json`);
+      toast.success('Backup dos dados realizado com sucesso!');
+    } catch (error) {
+      console.error('Error creating backup:', error);
+      toast.error('Erro ao criar backup');
+    }
+  };
+
   // Fetch dashboard data
   const fetchDashboardData = async () => {
     try {
