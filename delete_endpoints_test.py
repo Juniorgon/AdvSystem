@@ -424,8 +424,8 @@ class DeleteEndpointsTester:
         # Test 3: Test duplicate OAB validation
         duplicate_lawyer_data = {
             "full_name": "Dr. Maria Santos",
-            "oab_number": "123456",  # Same OAB number
-            "oab_state": "SP",       # Same state
+            "oab_number": random_oab,  # Same OAB number as above
+            "oab_state": "SP",         # Same state
             "email": "maria.santos@teste.com",
             "phone": "(11) 99999-2222",
             "specialization": "Direito Penal"
