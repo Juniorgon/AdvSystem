@@ -129,7 +129,8 @@ class BackendTester:
                 "complement": "Sala 1001"
             },
             "phone": "(11) 3333-4444",
-            "client_type": "corporate"
+            "client_type": "corporate",
+            "branch_id": branch_id
         }
         
         try:
