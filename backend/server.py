@@ -793,8 +793,15 @@ async def create_contract(contract: ContractCreate):
     return contract_obj
 
 @api_router.get("/contracts", response_model=List[Contract])
-async def get_contracts():
-    contracts = await db.contracts.find().to_list(1000)
+async def get_contracts(current_user: User = Depends(get_current_user)):
+    # Apply branch filter
+    query = {}
+    if current_user.branch_id:
+        query["branch_id"] = current_user.branch_id
+    elif current_user.role != UserRole.admin or current_user.branch_id is not None:
+        return []
+    
+    contracts = await db.contracts.find(query).to_list(1000)
     return [Contract(**contract) for contract in contracts]
 
 @api_router.get("/contracts/{contract_id}", response_model=Contract)
