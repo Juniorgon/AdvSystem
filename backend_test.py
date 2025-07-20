@@ -351,7 +351,8 @@ class BackendTester:
             "value": 250.00,
             "due_date": (datetime.now() + timedelta(days=15)).isoformat(),
             "status": "pendente",
-            "category": "Custas Processuais"
+            "category": "Custas Processuais",
+            "branch_id": self.branch_ids.get('caxias') or "some-branch-id"
         }
         
         try:
