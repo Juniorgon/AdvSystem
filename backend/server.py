@@ -100,6 +100,7 @@ class User(BaseModel):
     email: str
     full_name: str
     role: UserRole
+    branch_id: Optional[str] = None  # Vinculação com filial
     is_active: bool = True
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -112,9 +113,10 @@ class UserCreate(BaseModel):
     full_name: str
     password: str
     role: UserRole
+    branch_id: Optional[str] = None
 
 class UserLogin(BaseModel):
-    username: str
+    username_or_email: str  # Pode ser username ou email
     password: str
 
 class Token(BaseModel):
