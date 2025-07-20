@@ -658,8 +658,15 @@ async def create_process(process: ProcessCreate):
     return process_obj
 
 @api_router.get("/processes", response_model=List[Process])
-async def get_processes():
-    processes = await db.processes.find().to_list(1000)
+async def get_processes(current_user: User = Depends(get_current_user)):
+    # Apply branch filter
+    query = {}
+    if current_user.branch_id:
+        query["branch_id"] = current_user.branch_id
+    elif current_user.role != UserRole.admin or current_user.branch_id is not None:
+        return []
+    
+    processes = await db.processes.find(query).to_list(1000)
     return [Process(**process) for process in processes]
 
 @api_router.get("/processes/{process_id}", response_model=Process)
