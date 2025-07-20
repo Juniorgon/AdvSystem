@@ -216,6 +216,7 @@ class Process(BaseModel):
     value: float
     description: str
     role: ProcessRole
+    branch_id: str  # Vinculação obrigatória com filial
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -227,6 +228,7 @@ class ProcessCreate(BaseModel):
     value: float
     description: str
     role: ProcessRole
+    branch_id: str  # Vinculação obrigatória com filial
 
 class ProcessUpdate(BaseModel):
     process_number: Optional[str] = None
