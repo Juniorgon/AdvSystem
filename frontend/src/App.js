@@ -72,12 +72,54 @@ function App() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
+    const branchData = localStorage.getItem('selectedBranch');
+    
     if (token && userData) {
       setUser(JSON.parse(userData));
       setIsAuthenticated(true);
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      
+      if (branchData) {
+        setSelectedBranch(JSON.parse(branchData));
+      }
     }
   }, []);
+
+  // Fetch branches
+  const fetchBranches = async () => {
+    try {
+      const response = await axios.get(`${API}/branches`);
+      setBranches(response.data);
+      
+      // If user has a branch_id but no selected branch, auto-select it
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      if (userData.branch_id && !selectedBranch) {
+        const userBranch = response.data.find(b => b.id === userData.branch_id);
+        if (userBranch) {
+          setSelectedBranch(userBranch);
+          localStorage.setItem('selectedBranch', JSON.stringify(userBranch));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching branches:', error);
+    }
+  };
+
+  // Branch selection
+  const selectBranch = (branch) => {
+    setSelectedBranch(branch);
+    localStorage.setItem('selectedBranch', JSON.stringify(branch));
+    setShowBranchDrawer(false);
+    // Refresh data for new branch
+    if (isAuthenticated) {
+      fetchDashboardData();
+      fetchClients();
+      fetchProcesses();
+      fetchFinancialTransactions();
+      fetchContracts();
+      fetchLawyers();
+    }
+  };
 
   // Authentication functions
   const login = async (credentials) => {
