@@ -1529,16 +1529,29 @@ Testemunhas:
     return (
       <div className="p-6 space-y-6">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-4 lg:space-y-0">
-          <h2 className="text-2xl font-bold text-white">Clientes</h2>
+          <div>
+            <h2 className="text-2xl font-bold text-white">👥 Clientes</h2>
+            {selectedBranch && (
+              <p className="text-gray-400 text-sm">
+                📍 Filial: {selectedBranch.name}
+              </p>
+            )}
+          </div>
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={createSampleProcesses}
+              onClick={() => {
+                if (!validateBranchSelection()) return;
+                createSampleProcesses();
+              }}
               className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm"
             >
               Criar Processos de Teste
             </button>
             <button
-              onClick={createSampleFinancialData}
+              onClick={() => {
+                if (!validateBranchSelection()) return;
+                createSampleFinancialData();
+              }}
               className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors text-sm"
             >
               Criar Dados Financeiros
@@ -1558,7 +1571,10 @@ Testemunhas:
               <span>Excel</span>
             </button>
             <button
-              onClick={() => setShowForm(!showForm)}
+              onClick={() => {
+                if (!validateBranchSelection()) return;
+                setShowForm(!showForm);
+              }}
               className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors text-sm"
             >
               {showForm ? 'Cancelar' : 'Novo Cliente'}
