@@ -251,7 +251,8 @@ class BackendTester:
             "status": "Em Andamento",
             "value": 10000.00,
             "description": "Test process with invalid client",
-            "role": "debtor"
+            "role": "debtor",
+            "branch_id": self.branch_ids.get('caxias') or "some-branch-id"
         }
         
         try:
