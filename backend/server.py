@@ -150,18 +150,39 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     try:
         token = credentials.credentials
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
+        username_or_email: str = payload.get("sub")
+        if username_or_email is None:
             raise credentials_exception
     except jwt.PyJWTError:
         raise credentials_exception
     
-    user_doc = await db.users.find_one({"username": username})
-    if user_doc is None:
-        raise credentials_exception
+    # Try to find in users first
+    user_doc = await db.users.find_one({
+        "$or": [
+            {"username": username_or_email},
+            {"email": username_or_email}
+        ]
+    })
+    if user_doc:
+        return User(**user_doc)
     
-    user = User(**user_doc)
-    return user
+    # Try to find in lawyers (for lawyer authentication)
+    lawyer_doc = await db.lawyers.find_one({"email": username_or_email})
+    if lawyer_doc:
+        # Create user object from lawyer data
+        user_dict = {
+            "id": lawyer_doc['id'],
+            "username": lawyer_doc['email'],
+            "email": lawyer_doc['email'],
+            "full_name": lawyer_doc['full_name'],
+            "role": "lawyer",
+            "branch_id": lawyer_doc['branch_id'],
+            "is_active": lawyer_doc['is_active'],
+            "created_at": lawyer_doc['created_at']
+        }
+        return User(**user_dict)
+    
+    raise credentials_exception
 
 # Models
 class Address(BaseModel):
