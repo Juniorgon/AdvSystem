@@ -2682,11 +2682,17 @@ Testemunhas:
     );
   };
 
+  // Enhanced Contracts Component
   const Contracts = () => {
     const [showForm, setShowForm] = useState(false);
     const [editingContract, setEditingContract] = useState(null);
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterClient, setFilterClient] = useState('all');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [sortBy, setSortBy] = useState('created_at');
+    const [sortOrder, setSortOrder] = useState('desc');
+    const [showDetails, setShowDetails] = useState(false);
+    const [selectedContract, setSelectedContract] = useState(null);
     const [formData, setFormData] = useState({
       client_id: '',
       title: '',
@@ -2696,8 +2702,18 @@ Testemunhas:
       installments: 1,
       status: 'ativo',
       start_date: '',
-      end_date: ''
+      end_date: '',
+      contract_type: 'honorarios',
+      observations: ''
     });
+
+    const contractTypes = [
+      { value: 'honorarios', label: 'Honorários Advocatícios' },
+      { value: 'consultoria', label: 'Consultoria Jurídica' },
+      { value: 'assessoria', label: 'Assessoria Legal' },
+      { value: 'representacao', label: 'Representação Processual' },
+      { value: 'outros', label: 'Outros Serviços' }
+    ];
 
     const handleSubmit = async (e) => {
       e.preventDefault();
@@ -2719,27 +2735,32 @@ Testemunhas:
           toast.success('Contrato criado com sucesso!');
         }
         
-        setShowForm(false);
-        setFormData({
-          client_id: '',
-          title: '',
-          description: '',
-          value: '',
-          payment_conditions: '',
-          installments: 1,
-          status: 'ativo',
-          start_date: '',
-          end_date: ''
-        });
-        setEditingContract(null);
+        resetForm();
         await fetchContracts();
         await fetchDashboardData();
       } catch (error) {
-        console.error('Error saving contract:', error);
-        alert('Erro ao salvar contrato. Verifique os dados e tente novamente.');
+        handleApiError(error, 'Erro ao salvar contrato.');
       } finally {
         setLoading(false);
       }
+    };
+
+    const resetForm = () => {
+      setShowForm(false);
+      setFormData({
+        client_id: '',
+        title: '',
+        description: '',
+        value: '',
+        payment_conditions: '',
+        installments: 1,
+        status: 'ativo',
+        start_date: '',
+        end_date: '',
+        contract_type: 'honorarios',
+        observations: ''
+      });
+      setEditingContract(null);
     };
 
     const editContract = (contract) => {
@@ -2753,31 +2774,74 @@ Testemunhas:
         installments: contract.installments.toString(),
         status: contract.status,
         start_date: new Date(contract.start_date).toISOString().split('T')[0],
-        end_date: new Date(contract.end_date).toISOString().split('T')[0]
+        end_date: new Date(contract.end_date).toISOString().split('T')[0],
+        contract_type: contract.contract_type || 'honorarios',
+        observations: contract.observations || ''
       });
       setShowForm(true);
     };
 
-    const deleteContract = async (contractId) => {
-      if (window.confirm('Tem certeza que deseja excluir este contrato?')) {
+    const deleteContract = async (contractId, contractTitle) => {
+      if (window.confirm(`Tem certeza que deseja excluir o contrato "${contractTitle}"? Esta ação não pode ser desfeita.`)) {
         try {
+          setLoading(true);
           await axios.delete(`${API}/contracts/${contractId}`);
           toast.success('Contrato excluído com sucesso!');
           await fetchContracts();
           await fetchDashboardData();
         } catch (error) {
-          console.error('Error deleting contract:', error);
-          if (error.response?.status === 400) {
-            // Show specific error message from backend
-            toast.error(error.response.data.detail);
-          } else if (error.response?.status === 404) {
-            toast.error('Contrato não encontrado.');
-          } else if (error.response?.status === 403) {
-            toast.error('Você não tem permissão para excluir este contrato.');
-          } else {
-            toast.error('Erro inesperado ao excluir contrato. Tente novamente.');
-          }
+          handleApiError(error, 'Erro ao excluir contrato.');
+        } finally {
+          setLoading(false);
         }
+      }
+    };
+
+    const duplicateContract = async (contract) => {
+      const duplicatedData = {
+        ...contract,
+        title: `${contract.title} (Cópia)`,
+        status: 'rascunho',
+        start_date: new Date().toISOString(),
+        end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // +1 year
+      };
+      delete duplicatedData.id;
+      delete duplicatedData.created_at;
+      delete duplicatedData.updated_at;
+
+      try {
+        setLoading(true);
+        await axios.post(`${API}/contracts`, duplicatedData);
+        toast.success('Contrato duplicado com sucesso!');
+        await fetchContracts();
+      } catch (error) {
+        handleApiError(error, 'Erro ao duplicar contrato.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const renewContract = async (contract) => {
+      const renewedData = {
+        ...contract,
+        title: `${contract.title} - Renovação`,
+        status: 'ativo',
+        start_date: new Date().toISOString(),
+        end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+      };
+      delete renewedData.id;
+      delete renewedData.created_at;
+      delete renewedData.updated_at;
+
+      try {
+        setLoading(true);
+        await axios.post(`${API}/contracts`, renewedData);
+        toast.success('Contrato renovado com sucesso!');
+        await fetchContracts();
+      } catch (error) {
+        handleApiError(error, 'Erro ao renovar contrato.');
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -2786,79 +2850,194 @@ Testemunhas:
       return client ? client.name : 'Cliente não encontrado';
     };
 
-    const filteredContracts = contracts.filter(contract => {
-      const statusMatch = filterStatus === 'all' || contract.status === filterStatus;
-      const clientMatch = filterClient === 'all' || contract.client_id === filterClient;
-      return statusMatch && clientMatch;
-    });
+    const getStatusColor = (status) => {
+      switch(status) {
+        case 'ativo': return 'bg-green-100 text-green-800';
+        case 'concluído': return 'bg-blue-100 text-blue-800';
+        case 'suspenso': return 'bg-yellow-100 text-yellow-800';
+        case 'cancelado': return 'bg-red-100 text-red-800';
+        case 'rascunho': return 'bg-gray-100 text-gray-800';
+        default: return 'bg-gray-100 text-gray-800';
+      }
+    };
+
+    const getContractTypeLabel = (type) => {
+      const contractType = contractTypes.find(t => t.value === type);
+      return contractType ? contractType.label : 'Tipo não informado';
+    };
+
+    // Filtered and sorted contracts
+    const filteredContracts = contracts
+      .filter(contract => {
+        const statusMatch = filterStatus === 'all' || contract.status === filterStatus;
+        const clientMatch = filterClient === 'all' || contract.client_id === filterClient;
+        const searchMatch = searchTerm === '' || 
+          contract.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          contract.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          getClientName(contract.client_id).toLowerCase().includes(searchTerm.toLowerCase());
+        return statusMatch && clientMatch && searchMatch;
+      })
+      .sort((a, b) => {
+        const direction = sortOrder === 'asc' ? 1 : -1;
+        switch(sortBy) {
+          case 'client':
+            return direction * getClientName(a.client_id).localeCompare(getClientName(b.client_id));
+          case 'value':
+            return direction * (a.value - b.value);
+          case 'title':
+            return direction * a.title.localeCompare(b.title);
+          case 'status':
+            return direction * a.status.localeCompare(b.status);
+          case 'start_date':
+            return direction * (new Date(a.start_date) - new Date(b.start_date));
+          case 'end_date':
+            return direction * (new Date(a.end_date) - new Date(b.end_date));
+          default:
+            return direction * (new Date(a.created_at) - new Date(b.created_at));
+        }
+      });
 
     const contractStats = {
       total: contracts.length,
       active: contracts.filter(c => c.status === 'ativo').length,
       completed: contracts.filter(c => c.status === 'concluído').length,
+      suspended: contracts.filter(c => c.status === 'suspenso').length,
       cancelled: contracts.filter(c => c.status === 'cancelado').length,
+      draft: contracts.filter(c => c.status === 'rascunho').length,
       totalValue: contracts.reduce((sum, c) => sum + (c.value || 0), 0),
-      averageValue: contracts.length > 0 ? contracts.reduce((sum, c) => sum + (c.value || 0), 0) / contracts.length : 0
+      averageValue: contracts.length > 0 ? contracts.reduce((sum, c) => sum + (c.value || 0), 0) / contracts.length : 0,
+      expiringSoon: contracts.filter(c => {
+        const endDate = new Date(c.end_date);
+        const now = new Date();
+        const daysUntilExpiry = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+        return c.status === 'ativo' && daysUntilExpiry <= 30 && daysUntilExpiry > 0;
+      }).length
     };
 
     return (
       <div className="p-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-white">Gestão de Contratos</h2>
-          <button
-            onClick={() => setShowForm(true)}
-            className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            Novo Contrato
-          </button>
-        </div>
-
-        {/* Contract Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-            <p className="text-gray-400 text-sm">Total Contratos</p>
-            <p className="text-2xl font-bold text-white">{contractStats.total}</p>
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-4 lg:space-y-0">
+          <div>
+            <h2 className="text-2xl font-bold text-white">📋 Gestão de Contratos</h2>
+            <p className="text-gray-400 text-sm">Gerencie todos os contratos do escritório</p>
           </div>
-          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-            <p className="text-gray-400 text-sm">Ativos</p>
-            <p className="text-2xl font-bold text-green-400">{contractStats.active}</p>
-          </div>
-          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-            <p className="text-gray-400 text-sm">Concluídos</p>
-            <p className="text-2xl font-bold text-blue-400">{contractStats.completed}</p>
-          </div>
-          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-            <p className="text-gray-400 text-sm">Cancelados</p>
-            <p className="text-2xl font-bold text-red-400">{contractStats.cancelled}</p>
-          </div>
-          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-            <p className="text-gray-400 text-sm">Valor Total</p>
-            <p className="text-xl font-bold text-green-400">
-              R$ {contractStats.totalValue.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-            </p>
-          </div>
-          <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-            <p className="text-gray-400 text-sm">Valor Médio</p>
-            <p className="text-xl font-bold text-purple-400">
-              R$ {contractStats.averageValue.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-            </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => exportToPDF(contracts, 'Relatório de Contratos', 'contratos-gb-advocacia.pdf')}
+              className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg transition-colors text-sm flex items-center space-x-1"
+            >
+              <span>📊</span>
+              <span>PDF</span>
+            </button>
+            <button
+              onClick={() => exportToExcel(contracts, 'Relatório de Contratos', 'contratos-gb-advocacia.xlsx')}
+              className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg transition-colors text-sm flex items-center space-x-1"
+            >
+              <span>📈</span>
+              <span>Excel</span>
+            </button>
+            <button
+              onClick={() => setShowForm(true)}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors text-sm"
+            >
+              Novo Contrato
+            </button>
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Enhanced Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          <div className="bg-blue-800 p-4 rounded-lg border border-blue-600 shadow-lg card-hover">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-blue-200 text-xs">Total</p>
+                <p className="text-xl font-bold text-white">{contractStats.total}</p>
+              </div>
+              <div className="text-blue-300 text-2xl">📋</div>
+            </div>
+          </div>
+          
+          <div className="bg-green-800 p-4 rounded-lg border border-green-600 shadow-lg card-hover">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-green-200 text-xs">Ativos</p>
+                <p className="text-xl font-bold text-white">{contractStats.active}</p>
+              </div>
+              <div className="text-green-300 text-2xl">✅</div>
+            </div>
+          </div>
+          
+          <div className="bg-blue-700 p-4 rounded-lg border border-blue-500 shadow-lg card-hover">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-blue-200 text-xs">Concluídos</p>
+                <p className="text-xl font-bold text-white">{contractStats.completed}</p>
+              </div>
+              <div className="text-blue-300 text-2xl">🏁</div>
+            </div>
+          </div>
+          
+          <div className="bg-yellow-800 p-4 rounded-lg border border-yellow-600 shadow-lg card-hover">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-yellow-200 text-xs">Suspensos</p>
+                <p className="text-xl font-bold text-white">{contractStats.suspended}</p>
+              </div>
+              <div className="text-yellow-300 text-2xl">⏸️</div>
+            </div>
+          </div>
+          
+          <div className="bg-purple-800 p-4 rounded-lg border border-purple-600 shadow-lg card-hover">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-purple-200 text-xs">Valor Total</p>
+                <p className="text-lg font-bold text-white">
+                  R$ {(contractStats.totalValue / 1000).toFixed(0)}k
+                </p>
+              </div>
+              <div className="text-purple-300 text-2xl">💰</div>
+            </div>
+          </div>
+          
+          <div className="bg-red-800 p-4 rounded-lg border border-red-600 shadow-lg card-hover">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-red-200 text-xs">Vencendo</p>
+                <p className="text-xl font-bold text-white">{contractStats.expiringSoon}</p>
+                <p className="text-red-300 text-xs">em 30 dias</p>
+              </div>
+              <div className="text-red-300 text-2xl">⚠️</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Enhanced Filters and Search */}
         <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-1">Buscar</label>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Título, descrição ou cliente..."
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+              />
+            </div>
             <div>
               <label className="block text-gray-300 text-sm font-medium mb-1">Status</label>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
               >
                 <option value="all">Todos</option>
                 <option value="ativo">Ativos</option>
                 <option value="concluído">Concluídos</option>
+                <option value="suspenso">Suspensos</option>
                 <option value="cancelado">Cancelados</option>
+                <option value="rascunho">Rascunhos</option>
               </select>
             </div>
             <div>
@@ -2866,13 +3045,54 @@ Testemunhas:
               <select
                 value={filterClient}
                 onChange={(e) => setFilterClient(e.target.value)}
-                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
               >
                 <option value="all">Todos</option>
                 {clients.map(client => (
                   <option key={client.id} value={client.id}>{client.name}</option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-1">Ordenar por</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+              >
+                <option value="created_at">Data de Criação</option>
+                <option value="title">Título</option>
+                <option value="client">Cliente</option>
+                <option value="value">Valor</option>
+                <option value="status">Status</option>
+                <option value="start_date">Data Início</option>
+                <option value="end_date">Data Fim</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-1">Ordem</label>
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+              >
+                <option value="desc">Decrescente</option>
+                <option value="asc">Crescente</option>
+              </select>
+            </div>
+            <div className="flex items-end">
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setFilterStatus('all');
+                  setFilterClient('all');
+                  setSortBy('created_at');
+                  setSortOrder('desc');
+                }}
+                className="w-full bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg transition-colors text-sm"
+              >
+                Limpar Filtros
+              </button>
             </div>
           </div>
         </div>
