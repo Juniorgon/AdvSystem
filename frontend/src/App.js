@@ -121,6 +121,29 @@ function App() {
     }
   };
 
+  // Helper function to get current branch ID
+  const getCurrentBranchId = () => {
+    if (user?.branch_id) {
+      // User is restricted to their branch
+      return user.branch_id;
+    } else if (selectedBranch) {
+      // Super admin with selected branch
+      return selectedBranch.id;
+    } else {
+      // No branch selected - show error
+      return null;
+    }
+  };
+
+  // Helper function to validate branch selection
+  const validateBranchSelection = () => {
+    if (!user?.branch_id && !selectedBranch) {
+      toast.error('Por favor, selecione uma filial antes de criar registros.');
+      return false;
+    }
+    return true;
+  };
+
   // Authentication functions
   const login = async (credentials) => {
     try {
