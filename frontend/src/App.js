@@ -186,27 +186,60 @@ function App() {
             <span className="text-orange-500">GB</span> Advocacia & N. Comin
           </h1>
         </div>
-        <div className="flex space-x-1">
-          {[
-            { key: 'dashboard', label: 'Dashboard', icon: '📊' },
-            { key: 'clients', label: 'Clientes', icon: '👥' },
-            { key: 'processes', label: 'Processos', icon: '⚖️' },
-            { key: 'financial', label: 'Financeiro', icon: '💰' },
-            { key: 'contracts', label: 'Contratos', icon: '📋' }
-          ].map(item => (
+        
+        {isAuthenticated ? (
+          <div className="flex items-center space-x-4">
+            <div className="flex space-x-1">
+              {[
+                { key: 'dashboard', label: 'Dashboard', icon: '📊' },
+                { key: 'clients', label: 'Clientes', icon: '👥' },
+                { key: 'processes', label: 'Processos', icon: '⚖️' },
+                { key: 'financial', label: 'Financeiro', icon: '💰' },
+                { key: 'contracts', label: 'Contratos', icon: '📋' }
+              ].map(item => (
+                <button
+                  key={item.key}
+                  onClick={() => setCurrentPage(item.key)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    currentPage === item.key
+                      ? 'bg-orange-600 text-white'
+                      : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                  }`}
+                >
+                  {item.icon} {item.label}
+                </button>
+              ))}
+            </div>
+            
+            <div className="flex items-center space-x-3 border-l border-gray-700 pl-4">
+              <div className="text-right">
+                <p className="text-white text-sm font-medium">{user?.full_name}</p>
+                <p className="text-gray-400 text-xs">{user?.role}</p>
+              </div>
+              <button
+                onClick={logout}
+                className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm transition-colors"
+              >
+                Sair
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex space-x-2">
             <button
-              key={item.key}
-              onClick={() => setCurrentPage(item.key)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                currentPage === item.key
-                  ? 'bg-orange-600 text-white'
-                  : 'text-gray-300 hover:text-white hover:bg-gray-800'
-              }`}
+              onClick={() => setShowLogin(true)}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
             >
-              {item.icon} {item.label}
+              Login
             </button>
-          ))}
-        </div>
+            <button
+              onClick={() => setShowRegister(true)}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+            >
+              Registrar
+            </button>
+          </div>
+        )}
       </div>
     </nav>
   );
