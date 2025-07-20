@@ -54,11 +54,45 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 security = HTTPBearer()
 
+# Enums
+class ClientType(str, Enum):
+    individual = "individual"
+    corporate = "corporate"
+
+class TransactionType(str, Enum):
+    receita = "receita"
+    despesa = "despesa"
+
+class TransactionStatus(str, Enum):
+    pendente = "pendente"
+    pago = "pago"
+    vencido = "vencido"
+
 # Authentication Models
 class UserRole(str, Enum):
     admin = "admin"
     lawyer = "lawyer"
     secretary = "secretary"
+
+# Branch Models
+class Branch(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    cnpj: str
+    address: str
+    phone: str
+    email: str
+    responsible: str  # Nome do responsável
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class BranchCreate(BaseModel):
+    name: str
+    cnpj: str
+    address: str
+    phone: str
+    email: str
+    responsible: str
 
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
