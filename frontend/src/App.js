@@ -382,7 +382,8 @@ function App() {
                 { key: 'clients', label: 'Clientes', icon: '👥' },
                 { key: 'processes', label: 'Processos', icon: '⚖️' },
                 { key: 'financial', label: 'Financeiro', icon: '💰' },
-                { key: 'contracts', label: 'Contratos', icon: '📋' }
+                { key: 'contracts', label: 'Contratos', icon: '📋' },
+                { key: 'lawyers', label: 'Advogados', icon: '👨‍💼' }
               ].map(item => (
                 <button
                   key={item.key}
