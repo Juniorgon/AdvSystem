@@ -554,10 +554,24 @@ async def update_financial_transaction(transaction_id: str, transaction_update: 
 
 @api_router.delete("/financial/{transaction_id}")
 async def delete_financial_transaction(transaction_id: str):
+    # Check if transaction exists
+    transaction = await db.financial_transactions.find_one({"id": transaction_id})
+    if transaction is None:
+        raise HTTPException(status_code=404, detail="Transação financeira não encontrada")
+    
+    # Check if transaction is already paid
+    if transaction.get("status") == "pago":
+        raise HTTPException(
+            status_code=400,
+            detail="Não é possível excluir uma transação que já foi paga. Para reverter, altere o status primeiro."
+        )
+    
+    # If no restrictions, delete the transaction
     result = await db.financial_transactions.delete_one({"id": transaction_id})
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Transaction not found")
-    return {"message": "Transaction deleted successfully"}
+        raise HTTPException(status_code=404, detail="Transação financeira não encontrada")
+    
+    return {"message": "Transação financeira excluída com sucesso"}
 
 # Contract endpoints
 @api_router.post("/contracts", response_model=Contract)
