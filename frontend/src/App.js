@@ -528,9 +528,32 @@ function App() {
             </div>
             
             <div className="flex items-center space-x-3 border-l border-gray-700 pl-4">
+              {/* Branch Selector */}
+              <div className="text-center">
+                <button
+                  onClick={() => setShowBranchDrawer(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs transition-colors flex items-center space-x-2"
+                >
+                  <span>🏢</span>
+                  <div className="text-left">
+                    <div className="font-medium">
+                      {selectedBranch ? selectedBranch.name.substring(0, 20) + '...' : 'Selecionar Filial'}
+                    </div>
+                    {selectedBranch && (
+                      <div className="text-xs opacity-75">
+                        {selectedBranch.responsible}
+                      </div>
+                    )}
+                  </div>
+                </button>
+              </div>
+              
               <div className="text-right">
                 <p className="text-white text-sm font-medium">{user?.full_name}</p>
-                <p className="text-gray-400 text-xs">{user?.role}</p>
+                <p className="text-gray-400 text-xs">
+                  {user?.role === 'admin' ? 'Administrador' : 
+                   user?.role === 'lawyer' ? 'Advogado' : 'Usuário'}
+                </p>
               </div>
               <button
                 onClick={logout}
