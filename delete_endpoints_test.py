@@ -391,11 +391,13 @@ class DeleteEndpointsTester:
             self.log_test("Get Lawyers (Admin)", False, f"Exception: {str(e)}")
         
         # Test 2: POST /api/lawyers
+        import random
+        random_oab = str(random.randint(100000, 999999))
         lawyer_data = {
             "full_name": "Dr. Carlos Eduardo Silva",
-            "oab_number": "123456",
+            "oab_number": random_oab,  # Use random OAB to avoid conflicts
             "oab_state": "SP",
-            "email": "carlos.silva@teste.com",
+            "email": f"carlos.silva.{random_oab}@teste.com",  # Use unique email
             "phone": "(11) 99999-1111",
             "specialization": "Direito Civil"
         }
