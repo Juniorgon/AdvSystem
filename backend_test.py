@@ -31,8 +31,11 @@ class BackendTester:
             'clients': [],
             'processes': [],
             'financial_transactions': [],
-            'contracts': []
+            'contracts': [],
+            'lawyers': []
         }
+        self.auth_tokens = {}  # Store auth tokens for different users
+        self.branch_ids = {}  # Store branch IDs
         
     def log_test(self, test_name: str, success: bool, message: str, details: Any = None):
         """Log test results"""
