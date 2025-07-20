@@ -368,12 +368,15 @@ function App() {
   };
 
   useEffect(() => {
-    fetchDashboardData();
-    fetchClients();
-    fetchProcesses();
-    fetchFinancialTransactions();
-    fetchContracts();
-  }, []);
+    if (isAuthenticated) {
+      fetchDashboardData();
+      fetchClients();
+      fetchProcesses();
+      fetchFinancialTransactions();
+      fetchContracts();
+      fetchLawyers();
+    }
+  }, [isAuthenticated]);
 
   // Navigation Component
   const Navigation = () => (
