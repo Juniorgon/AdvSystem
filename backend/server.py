@@ -563,8 +563,18 @@ async def create_client(client: ClientCreate):
     return client_obj
 
 @api_router.get("/clients", response_model=List[Client])
-async def get_clients():
-    clients = await db.clients.find().to_list(1000)
+async def get_clients(current_user: User = Depends(get_current_user)):
+    # Apply branch filter based on user's branch_id
+    query = {}
+    if current_user.branch_id:
+        # User is restricted to their branch
+        query["branch_id"] = current_user.branch_id
+    elif current_user.role != UserRole.admin or current_user.branch_id is not None:
+        # Non-admin users or branch-restricted admins can only see their branch data
+        return []
+    # Super admin (role=admin, branch_id=None) can see all clients
+    
+    clients = await db.clients.find(query).to_list(1000)
     return [Client(**client) for client in clients]
 
 @api_router.get("/clients/{client_id}", response_model=Client)
