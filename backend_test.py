@@ -923,13 +923,16 @@ class BackendTester:
                 print(f"❌ Exception deleting client {client_id}: {str(e)}")
     
     def run_all_tests(self):
-        """Run all backend API tests"""
+        """Run all backend API tests including multi-branch system"""
         print(f"🚀 Starting Backend API Tests for GB Advocacia & N. Comin")
         print(f"📡 Backend URL: {API_BASE_URL}")
         print("=" * 80)
         
         try:
-            # Test all APIs
+            # First test multi-branch system (this sets up authentication)
+            self.run_multi_branch_tests()
+            
+            # Then test all other APIs
             self.test_client_management_api()
             self.test_process_management_api()
             self.test_financial_transaction_api()
