@@ -4070,6 +4070,9 @@ Testemunhas:
       {showLogin && <LoginModal />}
       {showRegister && <RegisterModal />}
       
+      {/* Branch Drawer */}
+      <BranchDrawer />
+      
       {/* Toast Container */}
       <ToastContainer
         position="top-right"
