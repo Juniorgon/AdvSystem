@@ -1263,17 +1263,7 @@ Testemunhas:
           await fetchDashboardData();
           toast.success('Cliente excluído com sucesso!');
         } catch (error) {
-          console.error('Error deleting client:', error);
-          if (error.response?.status === 400) {
-            // Show specific dependency error message
-            toast.error(error.response.data.detail);
-          } else if (error.response?.status === 404) {
-            toast.error('Cliente não encontrado.');
-          } else if (error.response?.status === 403) {
-            toast.error('Você não tem permissão para excluir este cliente.');
-          } else {
-            toast.error('Erro inesperado ao excluir cliente. Tente novamente.');
-          }
+          handleApiError(error, 'Erro ao excluir cliente.');
         } finally {
           setLoading(false);
         }
