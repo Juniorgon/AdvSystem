@@ -786,7 +786,7 @@ function App() {
         await fetchDashboardData();
       } catch (error) {
         console.error('Error saving client:', error);
-        alert('Erro ao salvar cliente. Verifique os dados e tente novamente.');
+        toast.error('Erro ao salvar cliente. Verifique os dados e tente novamente.');
       } finally {
         setLoading(false);
       }
