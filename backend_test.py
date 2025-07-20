@@ -329,7 +329,8 @@ class BackendTester:
             "value": 5000.00,
             "due_date": (datetime.now() + timedelta(days=30)).isoformat(),
             "status": "pendente",
-            "category": "Honorários"
+            "category": "Honorários",
+            "branch_id": self.branch_ids.get('caxias') or client_id  # Use branch_id if available
         }
         
         try:
