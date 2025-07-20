@@ -182,6 +182,7 @@ class Client(BaseModel):
     address: Address
     phone: str
     client_type: ClientType
+    branch_id: str  # Vinculação obrigatória com filial
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -194,6 +195,7 @@ class ClientCreate(BaseModel):
     address: Address
     phone: str
     client_type: ClientType
+    branch_id: str  # Vinculação obrigatória com filial
 
 class ClientUpdate(BaseModel):
     name: Optional[str] = None
