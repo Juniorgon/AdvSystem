@@ -300,6 +300,7 @@ class Lawyer(BaseModel):
     email: str
     phone: str
     specialization: Optional[str] = ""
+    branch_id: str  # Vinculação obrigatória com filial
     is_active: bool = True
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -311,6 +312,7 @@ class LawyerCreate(BaseModel):
     email: str
     phone: str
     specialization: Optional[str] = ""
+    branch_id: str  # Vinculação obrigatória com filial
 
 class DashboardStats(BaseModel):
     total_clients: int
