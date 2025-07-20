@@ -441,7 +441,8 @@ class BackendTester:
             "process_id": process_id,
             "value": 25000.00,
             "payment_conditions": "Pagamento em 5 parcelas mensais de R$ 5.000,00",
-            "installments": 5
+            "installments": 5,
+            "branch_id": self.branch_ids.get('caxias') or client_id  # Use branch_id if available
         }
         
         try:
