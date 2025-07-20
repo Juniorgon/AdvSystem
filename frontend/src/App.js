@@ -699,41 +699,61 @@ function App() {
     };
 
     return (
-      <div className="p-6 space-y-6">
-        {/* Header with period selector */}
-        <div className="flex justify-between items-center">
+      <div className="p-6 space-y-6 dashboard-export">
+        {/* Header with period selector and export buttons */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-4 lg:space-y-0">
           <h2 className="text-2xl font-bold text-white">Dashboard - GB Advocacia & N. Comin</h2>
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setChartPeriod('week')}
-              className={`px-3 py-1 rounded-lg text-sm transition-colors ${
-                chartPeriod === 'week' 
-                  ? 'bg-orange-600 text-white' 
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-            >
-              Semana
-            </button>
-            <button
-              onClick={() => setChartPeriod('month')}
-              className={`px-3 py-1 rounded-lg text-sm transition-colors ${
-                chartPeriod === 'month' 
-                  ? 'bg-orange-600 text-white' 
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-            >
-              Mês
-            </button>
-            <button
-              onClick={() => setChartPeriod('year')}
-              className={`px-3 py-1 rounded-lg text-sm transition-colors ${
-                chartPeriod === 'year' 
-                  ? 'bg-orange-600 text-white' 
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
-            >
-              Ano
-            </button>
+          <div className="flex flex-wrap gap-2">
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setChartPeriod('week')}
+                className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                  chartPeriod === 'week' 
+                    ? 'bg-orange-600 text-white' 
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                Semana
+              </button>
+              <button
+                onClick={() => setChartPeriod('month')}
+                className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                  chartPeriod === 'month' 
+                    ? 'bg-orange-600 text-white' 
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                Mês
+              </button>
+              <button
+                onClick={() => setChartPeriod('year')}
+                className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                  chartPeriod === 'year' 
+                    ? 'bg-orange-600 text-white' 
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                Ano
+              </button>
+            </div>
+            
+            {/* Export Buttons */}
+            <div className="flex space-x-2 border-l border-gray-600 pl-2">
+              <button
+                onClick={exportDashboardToPDF}
+                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-sm transition-colors flex items-center space-x-1"
+              >
+                <span>📊</span>
+                <span>PDF</span>
+              </button>
+              <button
+                onClick={backupData}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-sm transition-colors flex items-center space-x-1"
+              >
+                <span>💾</span>
+                <span>Backup</span>
+              </button>
+            </div>
           </div>
         </div>
 
