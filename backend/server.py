@@ -280,6 +280,7 @@ class Contract(BaseModel):
     value: float
     payment_conditions: str
     installments: int
+    branch_id: str  # Vinculação obrigatória com filial
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
