@@ -3035,6 +3035,353 @@ Testemunhas:
     );
   };
 
+  // Lawyers Component (Admin Only)
+  const Lawyers = () => {
+    const [showForm, setShowForm] = useState(false);
+    const [editingLawyer, setEditingLawyer] = useState(null);
+    const [formData, setFormData] = useState({
+      full_name: '',
+      oab_number: '',
+      oab_state: 'SP',
+      email: '',
+      phone: '',
+      specialization: ''
+    });
+
+    // Check if user is admin
+    if (user?.role !== 'admin') {
+      return (
+        <div className="p-6">
+          <div className="bg-red-900 bg-opacity-30 border border-red-600 rounded-lg p-6 text-center">
+            <h2 className="text-2xl font-bold text-red-400 mb-4">🚫 Acesso Restrito</h2>
+            <p className="text-red-200">
+              Apenas administradores podem acessar a gestão de advogados.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      try {
+        setLoading(true);
+        
+        if (editingLawyer) {
+          await axios.put(`${API}/lawyers/${editingLawyer.id}`, formData);
+          toast.success('Advogado atualizado com sucesso!');
+        } else {
+          await axios.post(`${API}/lawyers`, formData);
+          toast.success('Advogado registrado com sucesso!');
+        }
+        
+        setShowForm(false);
+        setFormData({
+          full_name: '',
+          oab_number: '',
+          oab_state: 'SP',
+          email: '',
+          phone: '',
+          specialization: ''
+        });
+        setEditingLawyer(null);
+        await fetchLawyers();
+      } catch (error) {
+        console.error('Error saving lawyer:', error);
+        if (error.response?.status === 400) {
+          toast.error(error.response.data.detail);
+        } else {
+          toast.error('Erro ao salvar advogado. Verifique os dados e tente novamente.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const editLawyer = (lawyer) => {
+      setEditingLawyer(lawyer);
+      setFormData({
+        full_name: lawyer.full_name,
+        oab_number: lawyer.oab_number,
+        oab_state: lawyer.oab_state,
+        email: lawyer.email,
+        phone: lawyer.phone,
+        specialization: lawyer.specialization
+      });
+      setShowForm(true);
+    };
+
+    const deactivateLawyer = async (lawyerId) => {
+      if (window.confirm('Tem certeza que deseja desativar este advogado?')) {
+        try {
+          await axios.delete(`${API}/lawyers/${lawyerId}`);
+          toast.success('Advogado desativado com sucesso!');
+          await fetchLawyers();
+        } catch (error) {
+          console.error('Error deactivating lawyer:', error);
+          toast.error('Erro ao desativar advogado.');
+        }
+      }
+    };
+
+    const lawyerStats = {
+      total: lawyers.length,
+      active: lawyers.filter(l => l.is_active).length,
+      byState: lawyers.reduce((acc, lawyer) => {
+        acc[lawyer.oab_state] = (acc[lawyer.oab_state] || 0) + 1;
+        return acc;
+      }, {})
+    };
+
+    const brazilianStates = [
+      'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 
+      'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 
+      'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+    ];
+
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-4 lg:space-y-0">
+          <h2 className="text-2xl font-bold text-white">👨‍💼 Gestão de Advogados</h2>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => exportToPDF(lawyers, 'Relatório de Advogados', 'advogados-gb-advocacia.pdf')}
+              className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg transition-colors text-sm flex items-center space-x-1"
+            >
+              <span>📊</span>
+              <span>PDF</span>
+            </button>
+            <button
+              onClick={() => exportToExcel(lawyers, 'Relatório de Advogados', 'advogados-gb-advocacia.xlsx')}
+              className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg transition-colors text-sm flex items-center space-x-1"
+            >
+              <span>📈</span>
+              <span>Excel</span>
+            </button>
+            <button
+              onClick={() => setShowForm(true)}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors text-sm"
+            >
+              Registrar Advogado
+            </button>
+          </div>
+        </div>
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-blue-800 p-6 rounded-lg border border-blue-600 shadow-lg card-hover">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-blue-200 text-sm">Total de Advogados</p>
+                <p className="text-3xl font-bold text-white">{lawyerStats.total}</p>
+              </div>
+              <div className="text-blue-300 text-4xl">👨‍💼</div>
+            </div>
+          </div>
+          
+          <div className="bg-green-800 p-6 rounded-lg border border-green-600 shadow-lg card-hover">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-green-200 text-sm">Advogados Ativos</p>
+                <p className="text-3xl font-bold text-white">{lawyerStats.active}</p>
+              </div>
+              <div className="text-green-300 text-4xl">✅</div>
+            </div>
+          </div>
+          
+          <div className="bg-purple-800 p-6 rounded-lg border border-purple-600 shadow-lg card-hover">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-purple-200 text-sm">Estados Representados</p>
+                <p className="text-3xl font-bold text-white">{Object.keys(lawyerStats.byState).length}</p>
+              </div>
+              <div className="text-purple-300 text-4xl">🗺️</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Lawyer Form */}
+        {showForm && (
+          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
+            <h3 className="text-lg font-semibold text-white mb-4">
+              {editingLawyer ? 'Editar Advogado' : 'Registrar Novo Advogado'}
+            </h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Nome Completo</label>
+                  <input
+                    type="text"
+                    value={formData.full_name}
+                    onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Número OAB</label>
+                  <input
+                    type="text"
+                    value={formData.oab_number}
+                    onChange={(e) => setFormData({...formData, oab_number: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="123456"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Estado OAB</label>
+                  <select
+                    value={formData.oab_state}
+                    onChange={(e) => setFormData({...formData, oab_state: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  >
+                    {brazilianStates.map(state => (
+                      <option key={state} value={state}>{state}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Telefone</label>
+                  <input
+                    type="text"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="(11) 99999-9999"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-1">Especialização (Opcional)</label>
+                <input
+                  type="text"
+                  value={formData.specialization}
+                  onChange={(e) => setFormData({...formData, specialization: e.target.value})}
+                  className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  placeholder="Ex: Direito Tributário, Direito Trabalhista..."
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForm(false);
+                    setEditingLawyer(null);
+                    setFormData({
+                      full_name: '',
+                      oab_number: '',
+                      oab_state: 'SP',
+                      email: '',
+                      phone: '',
+                      specialization: ''
+                    });
+                  }}
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Salvando...' : editingLawyer ? 'Atualizar Advogado' : 'Registrar Advogado'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Lawyers Table */}
+        <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-700">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">Nome</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">OAB</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">Email</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">Telefone</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">Especialização</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">Status</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {lawyers.length > 0 ? (
+                  lawyers.map((lawyer) => (
+                    <tr key={lawyer.id} className="hover:bg-gray-700">
+                      <td className="px-4 py-2 text-sm text-white font-medium">{lawyer.full_name}</td>
+                      <td className="px-4 py-2 text-sm text-gray-300">
+                        <span className="bg-blue-100 text-blue-800 px-2 py-1 text-xs font-medium rounded-full">
+                          {lawyer.oab_number}/{lawyer.oab_state}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-sm text-gray-300">{lawyer.email}</td>
+                      <td className="px-4 py-2 text-sm text-gray-300">{lawyer.phone}</td>
+                      <td className="px-4 py-2 text-sm text-gray-300">
+                        {lawyer.specialization || 'Não informado'}
+                      </td>
+                      <td className="px-4 py-2 text-sm">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          lawyer.is_active 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {lawyer.is_active ? 'Ativo' : 'Inativo'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-sm space-x-2">
+                        <button
+                          onClick={() => editLawyer(lawyer)}
+                          className="text-blue-400 hover:text-blue-300 transition-colors"
+                        >
+                          Editar
+                        </button>
+                        {lawyer.is_active && (
+                          <button
+                            onClick={() => deactivateLawyer(lawyer.id)}
+                            className="text-red-400 hover:text-red-300 transition-colors"
+                          >
+                            Desativar
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="px-4 py-8 text-center text-gray-400">
+                      Nenhum advogado registrado
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderCurrentPage = () => {
     switch(currentPage) {
       case 'dashboard':
