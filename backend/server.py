@@ -392,6 +392,45 @@ async def get_client(client_id: str):
         raise HTTPException(status_code=404, detail="Client not found")
     return Client(**client)
 
+@api_router.delete("/clients/{client_id}")
+async def delete_client(client_id: str):
+    # Check if client exists
+    client = await db.clients.find_one({"id": client_id})
+    if client is None:
+        raise HTTPException(status_code=404, detail="Cliente não encontrado")
+    
+    # Check for dependencies
+    dependencies = []
+    
+    # Check for processes
+    processes_count = await db.processes.count_documents({"client_id": client_id})
+    if processes_count > 0:
+        dependencies.append(f"{processes_count} processo(s)")
+    
+    # Check for contracts
+    contracts_count = await db.contracts.count_documents({"client_id": client_id})
+    if contracts_count > 0:
+        dependencies.append(f"{contracts_count} contrato(s)")
+    
+    # Check for financial transactions
+    financial_count = await db.financial_transactions.count_documents({"client_id": client_id})
+    if financial_count > 0:
+        dependencies.append(f"{financial_count} transação(ões) financeira(s)")
+    
+    if dependencies:
+        dependency_text = ", ".join(dependencies)
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Não é possível excluir este cliente pois ele possui: {dependency_text}. Remova essas dependências primeiro."
+        )
+    
+    # If no dependencies, delete the client
+    result = await db.clients.delete_one({"id": client_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Cliente não encontrado")
+    
+    return {"message": "Cliente excluído com sucesso"}
+
 @api_router.put("/clients/{client_id}", response_model=Client)
 async def update_client(client_id: str, client_update: ClientUpdate):
     existing_client = await db.clients.find_one({"id": client_id})
