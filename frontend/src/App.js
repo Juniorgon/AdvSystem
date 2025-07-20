@@ -633,7 +633,7 @@ function App() {
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-semibold text-white">🔐 Login</h3>
           <button
-            onClick={() => setShowLogin(false)}
+            onClick={closeLoginModal}
             className="text-gray-400 hover:text-white text-xl"
           >
             ✕
