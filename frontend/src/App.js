@@ -132,130 +132,340 @@ function App() {
     </nav>
   );
 
-  // Dashboard Component
-  const Dashboard = () => (
-    <div className="p-6 space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Total Clientes</p>
-              <p className="text-2xl font-bold text-white">{dashboardStats.total_clients || 0}</p>
-            </div>
-            <div className="text-orange-500 text-3xl">👥</div>
-          </div>
-        </div>
-        
-        <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Total Processos</p>
-              <p className="text-2xl font-bold text-white">{dashboardStats.total_processes || 0}</p>
-            </div>
-            <div className="text-orange-500 text-3xl">⚖️</div>
-          </div>
-        </div>
-        
-        <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Receita Total</p>
-              <p className="text-2xl font-bold text-green-400">
-                R$ {dashboardStats.total_revenue?.toLocaleString('pt-BR', {minimumFractionDigits: 2}) || '0,00'}
-              </p>
-            </div>
-            <div className="text-green-500 text-3xl">📈</div>
-          </div>
-        </div>
-        
-        <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Despesas Total</p>
-              <p className="text-2xl font-bold text-red-400">
-                R$ {dashboardStats.total_expenses?.toLocaleString('pt-BR', {minimumFractionDigits: 2}) || '0,00'}
-              </p>
-            </div>
-            <div className="text-red-500 text-3xl">📉</div>
-          </div>
-        </div>
-      </div>
+  // Dashboard Component with Charts
+  const Dashboard = () => {
+    const [chartPeriod, setChartPeriod] = useState('month');
+    
+    // Chart configurations
+    const chartOptions = {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: {
+            color: '#9CA3AF'
+          }
+        },
+        title: {
+          display: false,
+        },
+      },
+      scales: {
+        y: {
+          ticks: {
+            color: '#9CA3AF'
+          },
+          grid: {
+            color: '#374151'
+          }
+        },
+        x: {
+          ticks: {
+            color: '#9CA3AF'
+          },
+          grid: {
+            color: '#374151'
+          }
+        }
+      }
+    };
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Pagamentos Pendentes</p>
-              <p className="text-2xl font-bold text-yellow-400">{dashboardStats.pending_payments || 0}</p>
-            </div>
-            <div className="text-yellow-500 text-3xl">⏳</div>
-          </div>
-        </div>
-        
-        <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Pagamentos Vencidos</p>
-              <p className="text-2xl font-bold text-red-400">{dashboardStats.overdue_payments || 0}</p>
-            </div>
-            <div className="text-red-500 text-3xl">🚨</div>
-          </div>
-        </div>
-        
-        <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Receita Mensal</p>
-              <p className="text-2xl font-bold text-green-400">
-                R$ {dashboardStats.monthly_revenue?.toLocaleString('pt-BR', {minimumFractionDigits: 2}) || '0,00'}
-              </p>
-            </div>
-            <div className="text-green-500 text-3xl">📊</div>
-          </div>
-        </div>
-        
-        <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Despesas Mensais</p>
-              <p className="text-2xl font-bold text-red-400">
-                R$ {dashboardStats.monthly_expenses?.toLocaleString('pt-BR', {minimumFractionDigits: 2}) || '0,00'}
-              </p>
-            </div>
-            <div className="text-red-500 text-3xl">📊</div>
-          </div>
-        </div>
-      </div>
+    // Revenue vs Expenses Line Chart
+    const revenueExpenseData = {
+      labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+      datasets: [
+        {
+          label: 'Receitas',
+          data: [0, 0, 0, 0, 0, 0, dashboardStats.monthly_revenue || 0, 0, 0, 0, 0, 0],
+          borderColor: '#10B981',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          tension: 0.4,
+        },
+        {
+          label: 'Despesas',
+          data: [0, 0, 0, 0, 0, 0, dashboardStats.monthly_expenses || 0, 0, 0, 0, 0, 0],
+          borderColor: '#EF4444',
+          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          tension: 0.4,
+        },
+      ],
+    };
 
-      <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-        <h3 className="text-lg font-semibold text-white mb-4">Resumo do Fluxo de Caixa</h3>
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-400">Saldo Atual:</span>
-            <span className={`text-xl font-bold ${
-              (dashboardStats.total_revenue - dashboardStats.total_expenses) >= 0 
-                ? 'text-green-400' 
-                : 'text-red-400'
-            }`}>
-              R$ {((dashboardStats.total_revenue || 0) - (dashboardStats.total_expenses || 0))
-                .toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-            </span>
+    // Processes Status Doughnut Chart
+    const processesData = {
+      labels: ['Em Andamento', 'Concluídos', 'Suspensos'],
+      datasets: [
+        {
+          data: [
+            processes.filter(p => p.status === 'Em Andamento').length,
+            processes.filter(p => p.status === 'Concluído').length,
+            processes.filter(p => p.status === 'Suspenso').length
+          ],
+          backgroundColor: ['#F59E0B', '#10B981', '#EF4444'],
+          borderColor: ['#D97706', '#059669', '#DC2626'],
+          borderWidth: 2,
+        },
+      ],
+    };
+
+    // Financial Status Bar Chart
+    const financialData = {
+      labels: ['Pendentes', 'Vencidos', 'Pagos'],
+      datasets: [
+        {
+          label: 'Quantidade',
+          data: [
+            dashboardStats.pending_payments || 0,
+            dashboardStats.overdue_payments || 0,
+            financialTransactions.filter(f => f.status === 'pago').length
+          ],
+          backgroundColor: ['#F59E0B', '#EF4444', '#10B981'],
+          borderColor: ['#D97706', '#DC2626', '#059669'],
+          borderWidth: 2,
+        },
+      ],
+    };
+
+    // Client Types Distribution
+    const clientTypesData = {
+      labels: ['Pessoa Física', 'Pessoa Jurídica'],
+      datasets: [
+        {
+          data: [
+            clients.filter(c => c.client_type === 'individual').length,
+            clients.filter(c => c.client_type === 'corporate').length
+          ],
+          backgroundColor: ['#F97316', '#3B82F6'],
+          borderColor: ['#EA580C', '#2563EB'],
+          borderWidth: 2,
+        },
+      ],
+    };
+
+    return (
+      <div className="p-6 space-y-6">
+        {/* Header with period selector */}
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-white">Dashboard - GB Advocacia & N. Comin</h2>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setChartPeriod('week')}
+              className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                chartPeriod === 'week' 
+                  ? 'bg-orange-600 text-white' 
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              Semana
+            </button>
+            <button
+              onClick={() => setChartPeriod('month')}
+              className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                chartPeriod === 'month' 
+                  ? 'bg-orange-600 text-white' 
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              Mês
+            </button>
+            <button
+              onClick={() => setChartPeriod('year')}
+              className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                chartPeriod === 'year' 
+                  ? 'bg-orange-600 text-white' 
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              Ano
+            </button>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-400">Saldo Mensal:</span>
-            <span className={`text-xl font-bold ${
-              (dashboardStats.monthly_revenue - dashboardStats.monthly_expenses) >= 0 
-                ? 'text-green-400' 
-                : 'text-red-400'
-            }`}>
-              R$ {((dashboardStats.monthly_revenue || 0) - (dashboardStats.monthly_expenses || 0))
-                .toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-            </span>
+        </div>
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 rounded-lg border border-blue-500 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-blue-100 text-sm">Total Clientes</p>
+                <p className="text-3xl font-bold text-white">{dashboardStats.total_clients || 0}</p>
+                <p className="text-blue-200 text-xs mt-1">Ativos no sistema</p>
+              </div>
+              <div className="text-white text-4xl">👥</div>
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-6 rounded-lg border border-purple-500 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-purple-100 text-sm">Total Processos</p>
+                <p className="text-3xl font-bold text-white">{dashboardStats.total_processes || 0}</p>
+                <p className="text-purple-200 text-xs mt-1">Em acompanhamento</p>
+              </div>
+              <div className="text-white text-4xl">⚖️</div>
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-green-600 to-green-700 p-6 rounded-lg border border-green-500 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-green-100 text-sm">Receita Total</p>
+                <p className="text-3xl font-bold text-white">
+                  R$ {dashboardStats.total_revenue?.toLocaleString('pt-BR', {minimumFractionDigits: 2}) || '0,00'}
+                </p>
+                <p className="text-green-200 text-xs mt-1">Acumulado</p>
+              </div>
+              <div className="text-white text-4xl">📈</div>
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 rounded-lg border border-red-500 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-red-100 text-sm">Despesas Total</p>
+                <p className="text-3xl font-bold text-white">
+                  R$ {dashboardStats.total_expenses?.toLocaleString('pt-BR', {minimumFractionDigits: 2}) || '0,00'}
+                </p>
+                <p className="text-red-200 text-xs mt-1">Acumulado</p>
+              </div>
+              <div className="text-white text-4xl">📉</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Secondary KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-gray-800 p-6 rounded-lg border border-yellow-500 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Pagamentos Pendentes</p>
+                <p className="text-2xl font-bold text-yellow-400">{dashboardStats.pending_payments || 0}</p>
+              </div>
+              <div className="text-yellow-500 text-3xl">⏳</div>
+            </div>
+          </div>
+          
+          <div className="bg-gray-800 p-6 rounded-lg border border-red-500 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Pagamentos Vencidos</p>
+                <p className="text-2xl font-bold text-red-400">{dashboardStats.overdue_payments || 0}</p>
+              </div>
+              <div className="text-red-500 text-3xl">🚨</div>
+            </div>
+          </div>
+          
+          <div className="bg-gray-800 p-6 rounded-lg border border-green-500 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Receita Mensal</p>
+                <p className="text-2xl font-bold text-green-400">
+                  R$ {dashboardStats.monthly_revenue?.toLocaleString('pt-BR', {minimumFractionDigits: 2}) || '0,00'}
+                </p>
+              </div>
+              <div className="text-green-500 text-3xl">📊</div>
+            </div>
+          </div>
+          
+          <div className="bg-gray-800 p-6 rounded-lg border border-red-400 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Despesas Mensais</p>
+                <p className="text-2xl font-bold text-red-400">
+                  R$ {dashboardStats.monthly_expenses?.toLocaleString('pt-BR', {minimumFractionDigits: 2}) || '0,00'}
+                </p>
+              </div>
+              <div className="text-red-500 text-3xl">📊</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Revenue vs Expenses Chart */}
+          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
+            <h3 className="text-lg font-semibold text-white mb-4">Receitas vs Despesas</h3>
+            <div className="h-64">
+              <Line data={revenueExpenseData} options={chartOptions} />
+            </div>
+          </div>
+
+          {/* Processes Status Chart */}
+          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
+            <h3 className="text-lg font-semibold text-white mb-4">Status dos Processos</h3>
+            <div className="h-64">
+              <Doughnut data={processesData} options={chartOptions} />
+            </div>
+          </div>
+
+          {/* Financial Status Chart */}
+          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
+            <h3 className="text-lg font-semibold text-white mb-4">Status Financeiro</h3>
+            <div className="h-64">
+              <Bar data={financialData} options={chartOptions} />
+            </div>
+          </div>
+
+          {/* Client Types Chart */}
+          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
+            <h3 className="text-lg font-semibold text-white mb-4">Tipos de Cliente</h3>
+            <div className="h-64">
+              <Doughnut data={clientTypesData} options={chartOptions} />
+            </div>
+          </div>
+        </div>
+
+        {/* Cash Flow Summary - Enhanced */}
+        <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
+          <h3 className="text-lg font-semibold text-white mb-4">Resumo do Fluxo de Caixa</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
+                <span className="text-gray-300 font-medium">Saldo Atual:</span>
+                <span className={`text-2xl font-bold ${
+                  (dashboardStats.total_revenue - dashboardStats.total_expenses) >= 0 
+                    ? 'text-green-400' 
+                    : 'text-red-400'
+                }`}>
+                  R$ {((dashboardStats.total_revenue || 0) - (dashboardStats.total_expenses || 0))
+                    .toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
+                <span className="text-gray-300 font-medium">Saldo Mensal:</span>
+                <span className={`text-2xl font-bold ${
+                  (dashboardStats.monthly_revenue - dashboardStats.monthly_expenses) >= 0 
+                    ? 'text-green-400' 
+                    : 'text-red-400'
+                }`}>
+                  R$ {((dashboardStats.monthly_revenue || 0) - (dashboardStats.monthly_expenses || 0))
+                    .toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                </span>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
+                <span className="text-gray-300 font-medium">Total de Contratos:</span>
+                <span className="text-xl font-bold text-blue-400">{contracts.length}</span>
+              </div>
+              <div className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
+                <span className="text-gray-300 font-medium">Margem de Lucro:</span>
+                <span className={`text-xl font-bold ${
+                  (dashboardStats.total_revenue || 0) > 0
+                    ? 'text-purple-400'
+                    : 'text-gray-400'
+                }`}>
+                  {(dashboardStats.total_revenue || 0) > 0 
+                    ? `${(((dashboardStats.total_revenue - dashboardStats.total_expenses) / dashboardStats.total_revenue) * 100).toFixed(1)}%`
+                    : '0%'
+                  }
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Clients Component
   const Clients = () => {
