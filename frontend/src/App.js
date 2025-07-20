@@ -4059,6 +4059,27 @@ Testemunhas:
       
       {isAuthenticated ? (
         <main className="max-w-7xl mx-auto">
+          {/* Branch Selection Warning for Super Admin */}
+          {user?.role === 'admin' && !user?.branch_id && !selectedBranch && (
+            <div className="m-6 p-4 bg-yellow-900 bg-opacity-30 border border-yellow-600 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <span className="text-yellow-400 text-2xl">⚠️</span>
+                <div>
+                  <h3 className="text-yellow-200 font-semibold">Selecione uma Filial</h3>
+                  <p className="text-yellow-300 text-sm">
+                    Como Super Administrador, você precisa selecionar uma filial para visualizar e gerenciar os dados.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowBranchDrawer(true)}
+                  className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                >
+                  Selecionar Filial
+                </button>
+              </div>
+            </div>
+          )}
+          
           {renderCurrentPage()}
         </main>
       ) : (
