@@ -2421,7 +2421,7 @@ Testemunhas:
         
         if (editingContract) {
           await axios.put(`${API}/contracts/${editingContract.id}`, contractData);
-          alert('Contrato atualizado com sucesso!');
+          toast.success('Contrato atualizado com sucesso!');
         } else {
           await axios.post(`${API}/contracts`, contractData);
           alert('Contrato criado com sucesso!');
