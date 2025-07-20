@@ -46,7 +46,6 @@ function App() {
   const [financialTransactions, setFinancialTransactions] = useState([]);
   const [contracts, setContracts] = useState([]);
   const [lawyers, setLawyers] = useState([]);
-  const [loading, setLoading] = useState(false);
 
   // Authentication State
   const [user, setUser] = useState(null);
