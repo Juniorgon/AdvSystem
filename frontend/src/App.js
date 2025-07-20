@@ -3097,151 +3097,198 @@ Testemunhas:
           </div>
         </div>
 
-        {/* Contract Form */}
+        {/* Enhanced Contract Form */}
         {showForm && (
-          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-            <h3 className="text-lg font-semibold text-white mb-4">
-              {editingContract ? 'Editar Contrato' : 'Novo Contrato'}
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-1">Cliente</label>
-                  <select
-                    value={formData.client_id}
-                    onChange={(e) => setFormData({...formData, client_id: e.target.value})}
-                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    required
-                  >
-                    <option value="">Selecione um cliente</option>
-                    {clients.map(client => (
-                      <option key={client.id} value={client.id}>{client.name}</option>
-                    ))}
-                  </select>
+          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-xl">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-white">
+                {editingContract ? '✏️ Editar Contrato' : '➕ Novo Contrato'}
+              </h3>
+              <button
+                onClick={resetForm}
+                className="text-gray-400 hover:text-white text-xl"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Basic Information */}
+              <div className="bg-gray-750 p-4 rounded-lg border border-gray-600">
+                <h4 className="text-lg font-medium text-white mb-4">📋 Informações Básicas</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-1">Cliente *</label>
+                    <select
+                      value={formData.client_id}
+                      onChange={(e) => setFormData({...formData, client_id: e.target.value})}
+                      className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      required
+                    >
+                      <option value="">Selecione um cliente</option>
+                      {clients.map(client => (
+                        <option key={client.id} value={client.id}>{client.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-1">Tipo de Contrato *</label>
+                    <select
+                      value={formData.contract_type}
+                      onChange={(e) => setFormData({...formData, contract_type: e.target.value})}
+                      className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      required
+                    >
+                      {contractTypes.map(type => (
+                        <option key={type.value} value={type.value}>{type.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-1">Título do Contrato</label>
+                
+                <div className="mt-4">
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Título do Contrato *</label>
                   <input
                     type="text"
                     value={formData.title}
                     onChange={(e) => setFormData({...formData, title: e.target.value})}
-                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="Ex: Prestação de Serviços Advocatícios - Ação Trabalhista"
                     required
+                  />
+                </div>
+                
+                <div className="mt-4">
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Descrição Detalhada *</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    rows="4"
+                    placeholder="Descreva os serviços, escopo do trabalho, responsabilidades..."
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Financial Information */}
+              <div className="bg-gray-750 p-4 rounded-lg border border-gray-600">
+                <h4 className="text-lg font-medium text-white mb-4">💰 Informações Financeiras</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-1">Valor Total (R$) *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.value}
+                      onChange={(e) => setFormData({...formData, value: e.target.value})}
+                      className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      placeholder="0.00"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-1">Número de Parcelas *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="60"
+                      value={formData.installments}
+                      onChange={(e) => setFormData({...formData, installments: e.target.value})}
+                      className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-1">Status *</label>
+                    <select
+                      value={formData.status}
+                      onChange={(e) => setFormData({...formData, status: e.target.value})}
+                      className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    >
+                      <option value="rascunho">🗒️ Rascunho</option>
+                      <option value="ativo">✅ Ativo</option>
+                      <option value="suspenso">⏸️ Suspenso</option>
+                      <option value="concluído">🏁 Concluído</option>
+                      <option value="cancelado">❌ Cancelado</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Condições de Pagamento *</label>
+                  <input
+                    type="text"
+                    value={formData.payment_conditions}
+                    onChange={(e) => setFormData({...formData, payment_conditions: e.target.value})}
+                    className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="Ex: 30% entrada + 70% em 6x mensais, vencimento dia 10"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Dates and Observations */}
+              <div className="bg-gray-750 p-4 rounded-lg border border-gray-600">
+                <h4 className="text-lg font-medium text-white mb-4">📅 Prazos e Observações</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-1">Data de Início *</label>
+                    <input
+                      type="date"
+                      value={formData.start_date}
+                      onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+                      className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-1">Data de Término *</label>
+                    <input
+                      type="date"
+                      value={formData.end_date}
+                      onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+                      className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="mt-4">
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Observações Adicionais</label>
+                  <textarea
+                    value={formData.observations}
+                    onChange={(e) => setFormData({...formData, observations: e.target.value})}
+                    className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    rows="3"
+                    placeholder="Observações importantes, cláusulas especiais, notas internas..."
                   />
                 </div>
               </div>
               
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-1">Descrição</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  rows="3"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-1">Valor (R$)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.value}
-                    onChange={(e) => setFormData({...formData, value: e.target.value})}
-                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-1">Parcelas</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={formData.installments}
-                    onChange={(e) => setFormData({...formData, installments: e.target.value})}
-                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-1">Status</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({...formData, status: e.target.value})}
-                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  >
-                    <option value="ativo">Ativo</option>
-                    <option value="concluído">Concluído</option>
-                    <option value="cancelado">Cancelado</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-1">Condições de Pagamento</label>
-                <input
-                  type="text"
-                  value={formData.payment_conditions}
-                  onChange={(e) => setFormData({...formData, payment_conditions: e.target.value})}
-                  className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  placeholder="Ex: 30% entrada + 70% em 6x"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-1">Data de Início</label>
-                  <input
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({...formData, start_date: e.target.value})}
-                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-1">Data de Término</label>
-                  <input
-                    type="date"
-                    value={formData.end_date}
-                    onChange={(e) => setFormData({...formData, end_date: e.target.value})}
-                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-2">
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-6 border-t border-gray-600">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowForm(false);
-                    setEditingContract(null);
-                    setFormData({
-                      client_id: '',
-                      title: '',
-                      description: '',
-                      value: '',
-                      payment_conditions: '',
-                      installments: 1,
-                      status: 'ativo',
-                      start_date: '',
-                      end_date: ''
-                    });
-                  }}
-                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  onClick={resetForm}
+                  className="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50"
+                  className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 text-white px-8 py-3 rounded-lg transition-colors disabled:opacity-50 font-medium flex items-center justify-center space-x-2"
                 >
-                  {loading ? 'Salvando...' : editingContract ? 'Atualizar Contrato' : 'Salvar Contrato'}
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Salvando...</span>
+                    </>
+                  ) : (
+                    <span>{editingContract ? '✏️ Atualizar Contrato' : '➕ Criar Contrato'}</span>
+                  )}
                 </button>
               </div>
             </form>
