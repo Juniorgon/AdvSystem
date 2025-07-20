@@ -3394,6 +3394,8 @@ Testemunhas:
         return <Financial />;
       case 'contracts':
         return <Contracts />;
+      case 'lawyers':
+        return <Lawyers />;
       default:
         return <Dashboard />;
     }
