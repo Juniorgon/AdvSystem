@@ -127,6 +127,47 @@ function App() {
     register(registerForm);
   };
 
+  // Generic error handler for better user feedback
+  const handleApiError = (error, defaultMessage) => {
+    console.error('API Error:', error);
+    
+    if (error.response) {
+      const status = error.response.status;
+      const detail = error.response.data?.detail || error.response.data?.message;
+      
+      switch (status) {
+        case 400:
+          toast.error(detail || 'Dados inválidos. Verifique as informações e tente novamente.');
+          break;
+        case 401:
+          toast.error('Sessão expirada. Faça login novamente.');
+          logout();
+          break;
+        case 403:
+          toast.error('Você não tem permissão para realizar esta ação.');
+          break;
+        case 404:
+          toast.error(detail || 'Registro não encontrado.');
+          break;
+        case 409:
+          toast.error(detail || 'Este registro já existe ou está em conflito.');
+          break;
+        case 422:
+          toast.error('Dados inválidos. Verifique os campos obrigatórios.');
+          break;
+        case 500:
+          toast.error('Erro interno do servidor. Tente novamente em alguns minutos.');
+          break;
+        default:
+          toast.error(detail || defaultMessage || 'Erro inesperado. Tente novamente.');
+      }
+    } else if (error.request) {
+      toast.error('Erro de conexão. Verifique sua internet e tente novamente.');
+    } else {
+      toast.error(defaultMessage || 'Erro inesperado. Tente novamente.');
+    }
+  };
+
   // Export Functions
   const exportToPDF = async (data, title, filename) => {
     const doc = new jsPDF();
