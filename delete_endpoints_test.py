@@ -290,7 +290,8 @@ class DeleteEndpointsTester:
                 response = self.session.delete(f"{API_BASE_URL}/financial/{paid_transaction_id}")
                 if response.status_code == 400:
                     error_message = response.json().get('detail', '')
-                    if 'pago' in error_message.lower():
+                    # The message "Não é possível excluir uma transação que já foi paga" contains "pago"
+                    if 'pago' in error_message or 'paga' in error_message:
                         self.log_test("Delete Paid Transaction Block", True, 
                                     f"Correctly blocked paid transaction deletion: {error_message}")
                     else:
