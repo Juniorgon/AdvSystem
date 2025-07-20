@@ -102,8 +102,7 @@ function App() {
       setShowRegister(false);
       setShowLogin(true);
     } catch (error) {
-      console.error('Registration error:', error);
-      toast.error('Erro no registro. Tente novamente.');
+      handleApiError(error, 'Erro no registro. Tente novamente.');
     }
   };
 
