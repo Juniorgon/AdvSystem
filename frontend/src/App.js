@@ -778,7 +778,7 @@ function App() {
         } else {
           // Create new client
           await axios.post(`${API}/clients`, formData);
-          alert('Cliente criado com sucesso!');
+          toast.success('Cliente criado com sucesso!');
         }
         
         cancelEdit();
