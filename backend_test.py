@@ -584,7 +584,297 @@ class BackendTester:
         except Exception as e:
             self.log_test("Client-Contract Relationship", False, f"Exception: {str(e)}")
     
-    def cleanup_test_data(self):
+    def test_multi_branch_system(self):
+        """Test Multi-Branch System - Branches, Authentication, and User Management"""
+        print("\n=== Testing Multi-Branch System ===")
+        
+        # Test 1: Verify default branches were created
+        try:
+            response = self.session.get(f"{API_BASE_URL}/branches")
+            if response.status_code == 401:
+                # Need authentication, let's first login as super admin
+                self.login_super_admin()
+                response = self.session.get(f"{API_BASE_URL}/branches", 
+                                          headers={'Authorization': f'Bearer {self.auth_tokens.get("super_admin")}'})
+            
+            if response.status_code == 200:
+                branches = response.json()
+                self.log_test("Get Branches Endpoint", True, f"Retrieved {len(branches)} branches")
+                
+                # Check for specific branches
+                branch_names = [branch['name'] for branch in branches]
+                caxias_found = any('Caxias do Sul' in name for name in branch_names)
+                nova_prata_found = any('Nova Prata' in name for name in branch_names)
+                
+                if caxias_found and nova_prata_found:
+                    self.log_test("Default Branches Created", True, "Found Caxias do Sul and Nova Prata branches")
+                    # Store branch IDs for later use
+                    for branch in branches:
+                        if 'Caxias do Sul' in branch['name']:
+                            self.branch_ids['caxias'] = branch['id']
+                        elif 'Nova Prata' in branch['name']:
+                            self.branch_ids['nova_prata'] = branch['id']
+                else:
+                    self.log_test("Default Branches Created", False, f"Missing expected branches. Found: {branch_names}")
+                
+                # Verify branch structure
+                if branches:
+                    branch = branches[0]
+                    required_fields = ['id', 'name', 'cnpj', 'address', 'phone', 'email', 'responsible']
+                    missing_fields = [field for field in required_fields if field not in branch]
+                    if missing_fields:
+                        self.log_test("Branch Structure Validation", False, f"Missing fields: {missing_fields}")
+                    else:
+                        self.log_test("Branch Structure Validation", True, "All required branch fields present")
+            else:
+                self.log_test("Get Branches Endpoint", False, f"HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_test("Get Branches Endpoint", False, f"Exception: {str(e)}")
+    
+    def login_super_admin(self):
+        """Login as super admin"""
+        login_data = {
+            "username_or_email": "admin",
+            "password": "admin123"
+        }
+        try:
+            response = self.session.post(f"{API_BASE_URL}/auth/login", json=login_data)
+            if response.status_code == 200:
+                token_data = response.json()
+                self.auth_tokens['super_admin'] = token_data['access_token']
+                self.log_test("Super Admin Login", True, f"Logged in as: {token_data['user']['full_name']}")
+                return True
+            else:
+                self.log_test("Super Admin Login", False, f"HTTP {response.status_code}", response.text)
+                return False
+        except Exception as e:
+            self.log_test("Super Admin Login", False, f"Exception: {str(e)}")
+            return False
+    
+    def test_branch_admin_authentication(self):
+        """Test branch admin authentication"""
+        print("\n=== Testing Branch Admin Authentication ===")
+        
+        # Test 1: Login as Caxias Admin
+        caxias_login_data = {
+            "username_or_email": "admin_caxias",
+            "password": "admin123"
+        }
+        try:
+            response = self.session.post(f"{API_BASE_URL}/auth/login", json=caxias_login_data)
+            if response.status_code == 200:
+                token_data = response.json()
+                self.auth_tokens['admin_caxias'] = token_data['access_token']
+                user = token_data['user']
+                self.log_test("Caxias Admin Login", True, f"Logged in as: {user['full_name']}")
+                
+                # Verify branch association
+                if user.get('branch_id'):
+                    self.log_test("Caxias Admin Branch Association", True, f"Admin linked to branch: {user['branch_id']}")
+                else:
+                    self.log_test("Caxias Admin Branch Association", False, "Admin not linked to any branch")
+            else:
+                self.log_test("Caxias Admin Login", False, f"HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_test("Caxias Admin Login", False, f"Exception: {str(e)}")
+        
+        # Test 2: Login as Nova Prata Admin
+        nova_prata_login_data = {
+            "username_or_email": "admin_novaprata",
+            "password": "admin123"
+        }
+        try:
+            response = self.session.post(f"{API_BASE_URL}/auth/login", json=nova_prata_login_data)
+            if response.status_code == 200:
+                token_data = response.json()
+                self.auth_tokens['admin_novaprata'] = token_data['access_token']
+                user = token_data['user']
+                self.log_test("Nova Prata Admin Login", True, f"Logged in as: {user['full_name']}")
+                
+                # Verify branch association
+                if user.get('branch_id'):
+                    self.log_test("Nova Prata Admin Branch Association", True, f"Admin linked to branch: {user['branch_id']}")
+                else:
+                    self.log_test("Nova Prata Admin Branch Association", False, "Admin not linked to any branch")
+            else:
+                self.log_test("Nova Prata Admin Login", False, f"HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_test("Nova Prata Admin Login", False, f"Exception: {str(e)}")
+        
+        # Test 3: Test email login (should work with email instead of username)
+        email_login_data = {
+            "username_or_email": "admin.caxias@gbadvocacia.com",
+            "password": "admin123"
+        }
+        try:
+            response = self.session.post(f"{API_BASE_URL}/auth/login", json=email_login_data)
+            if response.status_code == 200:
+                token_data = response.json()
+                self.log_test("Email-based Login", True, f"Successfully logged in using email")
+            else:
+                self.log_test("Email-based Login", False, f"HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_test("Email-based Login", False, f"Exception: {str(e)}")
+    
+    def test_lawyer_management_and_authentication(self):
+        """Test lawyer creation and authentication with OAB"""
+        print("\n=== Testing Lawyer Management and Authentication ===")
+        
+        # Ensure we have super admin token
+        if 'super_admin' not in self.auth_tokens:
+            self.login_super_admin()
+        
+        if not self.branch_ids:
+            # Get branches first
+            response = self.session.get(f"{API_BASE_URL}/branches", 
+                                      headers={'Authorization': f'Bearer {self.auth_tokens.get("super_admin")}'})
+            if response.status_code == 200:
+                branches = response.json()
+                for branch in branches:
+                    if 'Caxias do Sul' in branch['name']:
+                        self.branch_ids['caxias'] = branch['id']
+                    elif 'Nova Prata' in branch['name']:
+                        self.branch_ids['nova_prata'] = branch['id']
+        
+        # Test 1: Create a test lawyer
+        if self.branch_ids.get('caxias'):
+            lawyer_data = {
+                "full_name": "Dr. João Silva Advocacia",
+                "oab_number": "123456",
+                "oab_state": "RS",
+                "email": "joao.silva@gbadvocacia.com",
+                "phone": "(54) 99999-8888",
+                "specialization": "Direito Civil",
+                "branch_id": self.branch_ids['caxias']
+            }
+            
+            try:
+                response = self.session.post(f"{API_BASE_URL}/lawyers", 
+                                           json=lawyer_data,
+                                           headers={'Authorization': f'Bearer {self.auth_tokens.get("super_admin")}'})
+                if response.status_code == 200:
+                    lawyer = response.json()
+                    self.created_entities['lawyers'].append(lawyer['id'])
+                    self.log_test("Create Test Lawyer", True, f"Created lawyer: {lawyer['full_name']}")
+                    
+                    # Test 2: Login as lawyer using email/OAB
+                    lawyer_login_data = {
+                        "username_or_email": lawyer_data['email'],
+                        "password": lawyer_data['oab_number']  # OAB number as password
+                    }
+                    
+                    try:
+                        login_response = self.session.post(f"{API_BASE_URL}/auth/login", json=lawyer_login_data)
+                        if login_response.status_code == 200:
+                            token_data = login_response.json()
+                            self.auth_tokens['test_lawyer'] = token_data['access_token']
+                            user = token_data['user']
+                            self.log_test("Lawyer Login (Email/OAB)", True, f"Lawyer logged in: {user['full_name']}")
+                            
+                            # Verify lawyer role and branch association
+                            if user.get('role') == 'lawyer':
+                                self.log_test("Lawyer Role Verification", True, "User has correct lawyer role")
+                            else:
+                                self.log_test("Lawyer Role Verification", False, f"Expected 'lawyer', got '{user.get('role')}'")
+                            
+                            if user.get('branch_id') == self.branch_ids['caxias']:
+                                self.log_test("Lawyer Branch Association", True, "Lawyer correctly associated with branch")
+                            else:
+                                self.log_test("Lawyer Branch Association", False, "Lawyer not correctly associated with branch")
+                        else:
+                            self.log_test("Lawyer Login (Email/OAB)", False, f"HTTP {login_response.status_code}", login_response.text)
+                    except Exception as e:
+                        self.log_test("Lawyer Login (Email/OAB)", False, f"Exception: {str(e)}")
+                        
+                else:
+                    self.log_test("Create Test Lawyer", False, f"HTTP {response.status_code}", response.text)
+            except Exception as e:
+                self.log_test("Create Test Lawyer", False, f"Exception: {str(e)}")
+        else:
+            self.log_test("Create Test Lawyer", False, "No Caxias branch ID available")
+    
+    def test_branch_data_isolation(self):
+        """Test that branch data is properly isolated"""
+        print("\n=== Testing Branch Data Isolation ===")
+        
+        # This test would verify that users can only see data from their own branch
+        # For now, we'll test that the branch system is working by creating entities with branch_id
+        
+        if not self.branch_ids:
+            self.log_test("Branch Data Isolation", False, "No branch IDs available for testing")
+            return
+        
+        # Test creating a client with branch_id
+        if self.branch_ids.get('caxias'):
+            client_data = {
+                "name": "Cliente Teste Caxias",
+                "nationality": "Brasileira",
+                "civil_status": "Solteiro",
+                "profession": "Engenheiro",
+                "cpf": "111.222.333-44",
+                "address": {
+                    "street": "Rua Teste",
+                    "number": "100",
+                    "city": "Caxias do Sul",
+                    "district": "Centro",
+                    "state": "RS",
+                    "complement": ""
+                },
+                "phone": "(54) 99999-0000",
+                "client_type": "individual",
+                "branch_id": self.branch_ids['caxias']
+            }
+            
+            try:
+                response = self.session.post(f"{API_BASE_URL}/clients", json=client_data)
+                if response.status_code == 200:
+                    client = response.json()
+                    self.created_entities['clients'].append(client['id'])
+                    
+                    # Verify branch_id is stored
+                    if client.get('branch_id') == self.branch_ids['caxias']:
+                        self.log_test("Client Branch Association", True, "Client correctly associated with branch")
+                    else:
+                        self.log_test("Client Branch Association", False, "Client not correctly associated with branch")
+                else:
+                    self.log_test("Client Branch Association", False, f"HTTP {response.status_code}", response.text)
+            except Exception as e:
+                self.log_test("Client Branch Association", False, f"Exception: {str(e)}")
+    
+    def cleanup_multi_branch_data(self):
+        """Clean up multi-branch test data"""
+        print("\n=== Cleaning Up Multi-Branch Test Data ===")
+        
+        # Delete test lawyers
+        if 'super_admin' in self.auth_tokens:
+            for lawyer_id in self.created_entities['lawyers']:
+                try:
+                    response = self.session.delete(f"{API_BASE_URL}/lawyers/{lawyer_id}",
+                                                 headers={'Authorization': f'Bearer {self.auth_tokens["super_admin"]}'})
+                    if response.status_code == 200:
+                        print(f"✅ Deactivated lawyer: {lawyer_id}")
+                    else:
+                        print(f"❌ Failed to deactivate lawyer {lawyer_id}: {response.status_code}")
+                except Exception as e:
+                    print(f"❌ Exception deactivating lawyer {lawyer_id}: {str(e)}")
+    
+    def run_multi_branch_tests(self):
+        """Run all multi-branch system tests"""
+        print(f"🏢 Starting Multi-Branch System Tests")
+        print("=" * 80)
+        
+        try:
+            # Test multi-branch functionality
+            self.test_multi_branch_system()
+            self.test_branch_admin_authentication()
+            self.test_lawyer_management_and_authentication()
+            self.test_branch_data_isolation()
+            
+        finally:
+            # Cleanup multi-branch data
+            self.cleanup_multi_branch_data()
+        
+        return self.test_results
         """Clean up created test data"""
         print("\n=== Cleaning Up Test Data ===")
         
