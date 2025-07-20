@@ -676,7 +676,7 @@ function App() {
           <div className="flex justify-end space-x-2 pt-2">
             <button
               type="button"
-              onClick={() => setShowLogin(false)}
+              onClick={closeLoginModal}
               className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
             >
               Cancelar
