@@ -576,12 +576,13 @@ function App() {
         
         <form onSubmit={handleLoginSubmit} className="space-y-4">
           <div>
-            <label className="block text-gray-300 text-sm font-medium mb-1">Usuário</label>
+            <label className="block text-gray-300 text-sm font-medium mb-1">Email ou Usuário</label>
             <input
               type="text"
-              value={loginForm.username}
-              onChange={(e) => setLoginForm({...loginForm, username: e.target.value})}
+              value={loginForm.username_or_email}
+              onChange={(e) => setLoginForm({...loginForm, username_or_email: e.target.value})}
               className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              placeholder="Digite seu email ou nome de usuário"
               required
             />
           </div>
