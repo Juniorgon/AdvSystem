@@ -718,6 +718,93 @@ function App() {
     </div>
   );
 
+  // Branch Drawer Component
+  const BranchDrawer = () => (
+    <div className={`fixed inset-0 z-50 transition-opacity ${showBranchDrawer ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setShowBranchDrawer(false)}></div>
+      
+      {/* Drawer */}
+      <div className={`absolute right-0 top-0 h-full w-96 bg-gray-900 shadow-xl transform transition-transform ${showBranchDrawer ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-white">🏢 Selecionar Filial</h2>
+            <button
+              onClick={() => setShowBranchDrawer(false)}
+              className="text-gray-400 hover:text-white text-2xl"
+            >
+              ✕
+            </button>
+          </div>
+          
+          {/* Current Selection */}
+          {selectedBranch && (
+            <div className="mb-6 p-4 bg-orange-900 bg-opacity-30 border border-orange-600 rounded-lg">
+              <p className="text-orange-200 text-sm mb-2">Filial Atual:</p>
+              <p className="text-white font-semibold">{selectedBranch.name}</p>
+              <p className="text-gray-300 text-sm">{selectedBranch.address}</p>
+            </div>
+          )}
+          
+          {/* User's Branch (if restricted) */}
+          {user?.branch_id && (
+            <div className="mb-4 p-3 bg-blue-900 bg-opacity-30 border border-blue-600 rounded-lg">
+              <p className="text-blue-200 text-xs">
+                ℹ️ Você está restrito à filial associada ao seu usuário
+              </p>
+            </div>
+          )}
+          
+          {/* Branch List */}
+          <div className="space-y-3">
+            {branches.map((branch) => (
+              <div
+                key={branch.id}
+                className={`p-4 rounded-lg border cursor-pointer transition-colors ${
+                  selectedBranch?.id === branch.id
+                    ? 'bg-orange-700 border-orange-500'
+                    : 'bg-gray-800 border-gray-600 hover:border-orange-500 hover:bg-gray-750'
+                }`}
+                onClick={() => selectBranch(branch)}
+              >
+                <h3 className="font-semibold text-white mb-2">{branch.name}</h3>
+                <div className="text-sm text-gray-300 space-y-1">
+                  <p>📍 {branch.address}</p>
+                  <p>📞 {branch.phone}</p>
+                  <p>👤 {branch.responsible}</p>
+                </div>
+              </div>
+            ))}
+            
+            {branches.length === 0 && (
+              <div className="text-center py-8 text-gray-400">
+                <p>Nenhuma filial encontrada</p>
+              </div>
+            )}
+          </div>
+          
+          {/* Super Admin Actions */}
+          {user?.role === 'admin' && !user?.branch_id && (
+            <div className="mt-6 pt-6 border-t border-gray-700">
+              <p className="text-gray-400 text-sm mb-3">Ações de Super Admin:</p>
+              <button
+                onClick={() => {
+                  setSelectedBranch(null);
+                  localStorage.removeItem('selectedBranch');
+                  setShowBranchDrawer(false);
+                  toast.info('Visualização de todas as filiais ativada');
+                }}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg transition-colors"
+              >
+                Ver Todas as Filiais
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   // Dashboard Component with Charts
   const Dashboard = () => {
     const [chartPeriod, setChartPeriod] = useState('month');
