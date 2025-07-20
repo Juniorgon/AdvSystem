@@ -498,10 +498,25 @@ async def update_process(process_id: str, process_update: ProcessUpdate):
 
 @api_router.delete("/processes/{process_id}")
 async def delete_process(process_id: str):
+    # Check if process exists
+    process = await db.processes.find_one({"id": process_id})
+    if process is None:
+        raise HTTPException(status_code=404, detail="Processo não encontrado")
+    
+    # Check for dependencies (financial transactions)
+    financial_count = await db.financial_transactions.count_documents({"process_id": process_id})
+    if financial_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Não é possível excluir este processo pois ele possui {financial_count} transação(ões) financeira(s) vinculada(s). Remova essas transações primeiro."
+        )
+    
+    # If no dependencies, delete the process
     result = await db.processes.delete_one({"id": process_id})
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Process not found")
-    return {"message": "Process deleted successfully"}
+        raise HTTPException(status_code=404, detail="Processo não encontrado")
+    
+    return {"message": "Processo excluído com sucesso"}
 
 # Financial Transaction endpoints
 @api_router.post("/financial", response_model=FinancialTransaction)
