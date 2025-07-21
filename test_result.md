@@ -276,15 +276,18 @@ frontend:
 
   - task: "Contract Judicial/Extrajudicial Filter"
     implemented: true
-    working: "NA"
+    working: false
     file: "/app/frontend/src/App.js"
-    stuck_count: 0
-    priority: "medium"
-    needs_retesting: true
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Added 'Judicial e extrajudicial' filter to contracts page with expanded contract types (judicial: ação civil, trabalhista, penal, representação processual; extrajudicial: honorários, consultoria, assessoria, outros). Filter properly categorizes and shows appropriate icons (⚖️ for judicial, 📋 for extrajudicial)."
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL JAVASCRIPT ERROR: Contracts page fails to load due to TypeError: Cannot read properties of undefined (reading 'charAt'). Multiple React runtime errors in bundle.js affecting Contracts component, Array.map operations, and React hooks. This prevents the Contracts page from rendering and testing the Judicial/Extrajudicial filter. Error appears to be in Contracts component where charAt is called on undefined value. All other pages (Dashboard, Clients, Financial, Lawyers) load successfully."
 
   - task: "WhatsApp Integration Frontend"
     implemented: true
