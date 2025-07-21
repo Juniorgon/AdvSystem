@@ -91,7 +91,7 @@ Olá *{client_name}*! 👋
 
 💰 Para evitar atrasos, realize o pagamento até a data de vencimento.
 
-📞 Em caso de dúvidas, entre em contato conosco.
+📞 Em caso de dúvidas, entre em contato conosco pelo +55 54 99710-2525.
 
 Atenciosamente,
 GB & N.Comin Advocacia"""
