@@ -272,7 +272,7 @@ function App() {
     
     // Add company info
     doc.setFontSize(12);
-    doc.text('GB Advocacia & N. Comin', 20, 35);
+    doc.text('GB & N.Comin Advocacia', 20, 35);
     doc.text(`Relatório gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 20, 45);
     
     // Add table based on data type
