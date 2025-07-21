@@ -2923,6 +2923,7 @@ Testemunhas:
     const [editingContract, setEditingContract] = useState(null);
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterClient, setFilterClient] = useState('all');
+    const [filterType, setFilterType] = useState('all'); // Novo filtro para Judicial/Extrajudicial
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState('created_at');
     const [sortOrder, setSortOrder] = useState('desc');
