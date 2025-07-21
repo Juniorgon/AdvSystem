@@ -309,6 +309,7 @@ test_plan:
     - "Contract Management API"
     - "Dashboard Statistics API"
     - "Lawyer Management API"
+    - "WhatsApp Business Integration API"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
