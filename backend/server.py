@@ -1026,6 +1026,77 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
         monthly_expenses=monthly_expenses
     )
 
+# WhatsApp API Routes
+@api_router.post("/whatsapp/send-reminder/{transaction_id}")
+async def send_manual_reminder(transaction_id: str, current_user: dict = Depends(get_current_user)):
+    """
+    Envia lembrete manual de pagamento via WhatsApp
+    """
+    if current_user['role'] not in ['admin', 'lawyer']:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    result = await payment_reminder_service.send_manual_reminder(transaction_id)
+    
+    if result["success"]:
+        return {"message": "Lembrete enviado com sucesso", "data": result}
+    else:
+        raise HTTPException(status_code=400, detail=result.get("error", "Erro ao enviar lembrete"))
+
+@api_router.post("/whatsapp/check-payments")
+async def trigger_payment_check(current_user: dict = Depends(get_current_user)):
+    """
+    Dispara verificação manual de pagamentos pendentes
+    """
+    if current_user['role'] not in ['admin']:
+        raise HTTPException(status_code=403, detail="Apenas administradores podem disparar verificações")
+    
+    try:
+        await payment_reminder_service.check_and_send_reminders()
+        return {"message": "Verificação de pagamentos executada com sucesso"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro na verificação: {str(e)}")
+
+@api_router.get("/whatsapp/status")
+async def get_whatsapp_status(current_user: dict = Depends(get_current_user)):
+    """
+    Retorna status do serviço WhatsApp e jobs agendados
+    """
+    if current_user['role'] not in ['admin', 'lawyer']:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    jobs = payment_scheduler.get_jobs_status()
+    
+    return {
+        "whatsapp_enabled": whatsapp_service.is_enabled,
+        "scheduler_running": payment_scheduler.scheduler.running,
+        "jobs": jobs,
+        "next_check": jobs[0]["next_run"] if jobs else None
+    }
+
+@api_router.post("/whatsapp/send-message")
+async def send_whatsapp_message(
+    message_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Envia mensagem personalizada via WhatsApp
+    """
+    if current_user['role'] not in ['admin', 'lawyer']:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    phone_number = message_data.get("phone_number")
+    message = message_data.get("message")
+    
+    if not phone_number or not message:
+        raise HTTPException(status_code=400, detail="phone_number e message são obrigatórios")
+    
+    result = await whatsapp_service.send_message(phone_number, message)
+    
+    if result["success"]:
+        return {"message": "Mensagem enviada com sucesso", "data": result}
+    else:
+        raise HTTPException(status_code=400, detail=result.get("error", "Erro ao enviar mensagem"))
+
 # Include the router in the main app
 app.include_router(api_router)
 
