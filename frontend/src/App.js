@@ -2618,14 +2618,27 @@ Testemunhas:
 
     const markAsPaid = async (transactionId) => {
       try {
-        await axios.put(`${API}/financial/${transactionId}`, {
-          status: 'pago',
-          payment_date: new Date().toISOString()
-        });
+        await axios.put(`${API}/financial/${transactionId}`, { status: 'pago' });
         await fetchFinancialTransactions();
         await fetchDashboardData();
+        toast.success('Transação marcada como paga!');
       } catch (error) {
         console.error('Error marking as paid:', error);
+        toast.error('Erro ao marcar como paga');
+      }
+    };
+
+    const sendWhatsAppReminder = async (transactionId) => {
+      try {
+        setLoading(true);
+        const response = await axios.post(`${API}/whatsapp/send-reminder/${transactionId}`);
+        toast.success('Lembrete enviado via WhatsApp!');
+      } catch (error) {
+        console.error('Error sending WhatsApp reminder:', error);
+        const errorMessage = error.response?.data?.detail || 'Erro ao enviar lembrete via WhatsApp';
+        toast.error(errorMessage);
+      } finally {
+        setLoading(false);
       }
     };
 
