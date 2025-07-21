@@ -649,7 +649,7 @@ function App() {
               type="text"
               name="username_or_email"
               value={loginForm.username_or_email}
-              onChange={(e) => setLoginForm({...loginForm, username_or_email: e.target.value})}
+              onChange={(e) => setLoginForm(prev => ({...prev, username_or_email: e.target.value}))}
               className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               placeholder="Digite seu email ou nome de usuário"
               autoComplete="username"
