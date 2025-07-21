@@ -3110,11 +3110,13 @@ Testemunhas:
       .filter(contract => {
         const statusMatch = filterStatus === 'all' || contract.status === filterStatus;
         const clientMatch = filterClient === 'all' || contract.client_id === filterClient;
+        const typeMatch = filterType === 'all' || 
+          contractTypes.find(t => t.value === contract.contract_type)?.category === filterType;
         const searchMatch = searchTerm === '' || 
           contract.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
           contract.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
           getClientName(contract.client_id).toLowerCase().includes(searchTerm.toLowerCase());
-        return statusMatch && clientMatch && searchMatch;
+        return statusMatch && clientMatch && typeMatch && searchMatch;
       })
       .sort((a, b) => {
         const direction = sortOrder === 'asc' ? 1 : -1;
