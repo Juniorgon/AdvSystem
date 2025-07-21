@@ -3295,6 +3295,18 @@ Testemunhas:
               </select>
             </div>
             <div>
+              <label className="block text-gray-300 text-sm font-medium mb-1">Judicial e extrajudicial</label>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+              >
+                <option value="all">Todos</option>
+                <option value="judicial">⚖️ Judicial</option>
+                <option value="extrajudicial">📋 Extrajudicial</option>
+              </select>
+            </div>
+            <div>
               <label className="block text-gray-300 text-sm font-medium mb-1">Ordenar por</label>
               <select
                 value={sortBy}
