@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Sistema de controle de caixa para escritório de advocacia GB Advocacia & N. Comin com interface escura/laranja, controle de clientes, processos, financeiro, contratos e integrações futuras com e-proc, PJE e Google APIs"
+user_problem_statement: "Sistema de controle de caixa para escritório de advocacia GB & N.Comin Advocacia com interface escura/laranja, controle de clientes, processos, financeiro, contratos e integrações futuras com e-proc, PJE, Google APIs e WhatsApp Business"
 
 backend:
   - task: "Client Management API"
@@ -206,6 +206,18 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ PASSED ALL TESTS: Lawyer management API working perfectly. Tested admin authentication, lawyer CRUD operations, OAB number validation, email uniqueness, soft delete (deactivation), and proper authorization controls. All lawyer endpoints require admin access and work correctly."
+
+  - task: "WhatsApp Business Integration API"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/whatsapp_service.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented WhatsApp Business integration with automatic payment reminders, overdue notices, and manual reminder sending. Includes scheduler for daily checks at 9:00 and 14:00, and complete API endpoints for WhatsApp management."
 
 frontend:
   - task: "Dashboard Interface"
