@@ -230,7 +230,7 @@ frontend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Implemented complete dashboard with real-time metrics, financial KPIs, and dark theme with orange accents"
+        comment: "Implemented complete dashboard with real-time metrics, financial KPIs, and dark theme with orange accents. Updated company name to 'GB & N.Comin Advocacia'."
         
   - task: "Client Management Interface"
     implemented: true
@@ -255,6 +255,42 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "Implemented responsive navigation with dark gray/black and orange theme, multi-section layout"
+
+  - task: "Login Form Bug Fix"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Fixed login form bug where input fields only accepted one character at a time by using proper state spreading with prev => ({...prev, field: value}) instead of destructuring the state object directly."
+
+  - task: "Contract Judicial/Extrajudicial Filter"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added 'Judicial e extrajudicial' filter to contracts page with expanded contract types (judicial: ação civil, trabalhista, penal, representação processual; extrajudicial: honorários, consultoria, assessoria, outros). Filter properly categorizes and shows appropriate icons (⚖️ for judicial, 📋 for extrajudicial)."
+
+  - task: "WhatsApp Integration Frontend"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented WhatsApp Business integration in frontend with: (1) Individual WhatsApp reminder buttons for pending transactions linked to clients, (2) Admin controls for checking WhatsApp status and triggering bulk payment verification, (3) Enhanced financial interface with WhatsApp management tools, (4) Real-time status feedback and proper error handling with toast notifications."
 
 metadata:
   created_by: "main_agent"
