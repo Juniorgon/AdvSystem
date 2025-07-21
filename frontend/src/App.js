@@ -2697,13 +2697,34 @@ Testemunhas:
     return (
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-white">Controle Financeiro</h2>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            {showForm ? 'Cancelar' : 'Nova Transação'}
-          </button>
+          <h2 className="text-2xl font-bold text-white">💰 Controle Financeiro</h2>
+          <div className="flex space-x-2">
+            {user?.role === 'admin' && (
+              <>
+                <button
+                  onClick={checkWhatsAppStatus}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition-colors text-sm"
+                  title="Status WhatsApp"
+                >
+                  📱 Status
+                </button>
+                <button
+                  onClick={checkAllPayments}
+                  disabled={loading}
+                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg transition-colors text-sm disabled:opacity-50"
+                  title="Verificar todos os pagamentos e enviar lembretes"
+                >
+                  📞 Verificar Pagamentos
+                </button>
+              </>
+            )}
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              {showForm ? 'Cancelar' : 'Nova Transação'}
+            </button>
+          </div>
         </div>
 
         {/* Financial Summary Cards */}
