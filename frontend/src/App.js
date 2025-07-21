@@ -1270,13 +1270,25 @@ function App() {
       try {
         setLoading(true);
         
+        // Get current branch ID
+        const branchId = getCurrentBranchId();
+        if (!branchId) {
+          toast.error('Selecione uma filial antes de criar o cliente.');
+          return;
+        }
+
+        const clientData = {
+          ...formData,
+          branch_id: branchId
+        };
+        
         if (editingClient) {
           // Update existing client
-          await axios.put(`${API}/clients/${editingClient.id}`, formData);
+          await axios.put(`${API}/clients/${editingClient.id}`, clientData);
           toast.success('Cliente atualizado com sucesso!');
         } else {
           // Create new client
-          await axios.post(`${API}/clients`, formData);
+          await axios.post(`${API}/clients`, clientData);
           toast.success('Cliente criado com sucesso!');
         }
         
@@ -1285,7 +1297,7 @@ function App() {
         await fetchDashboardData();
       } catch (error) {
         console.error('Error saving client:', error);
-        toast.error('Erro ao salvar cliente. Verifique os dados e tente novamente.');
+        handleApiError(error, 'Erro ao salvar cliente. Verifique os dados e tente novamente.');
       } finally {
         setLoading(false);
       }
