@@ -116,7 +116,7 @@ Olá *{client_name}*! 👋
 
 💰 *É importante regularizar o pagamento o quanto antes.*
 
-📞 Entre em contato conosco para negociar ou esclarecer dúvidas.
+📞 Entre em contato conosco pelo +55 54 99710-2525 para negociar ou esclarecer dúvidas.
 
 Atenciosamente,
 GB & N.Comin Advocacia"""
