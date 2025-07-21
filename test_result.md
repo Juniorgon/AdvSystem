@@ -357,14 +357,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Client Management API"
-    - "Process Management API"
-    - "Financial Transaction API"
-    - "Contract Management API"
-    - "Dashboard Statistics API"
-    - "Lawyer Management API"
-    - "WhatsApp Business Integration API"
-  stuck_tasks: []
+    - "Contract Judicial/Extrajudicial Filter"
+  stuck_tasks:
+    - "Contract Judicial/Extrajudicial Filter"
   test_all: false
   test_priority: "high_first"
 
