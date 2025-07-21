@@ -3785,9 +3785,17 @@ Testemunhas:
                         
                         <td className="px-6 py-4">
                           <div className="text-sm text-gray-300">
-                            <div>{new Date(contract.start_date).toLocaleDateString('pt-BR')}</div>
+                            <div>
+                              {contract.start_date 
+                                ? new Date(contract.start_date).toLocaleDateString('pt-BR') 
+                                : 'Data não definida'
+                              }
+                            </div>
                             <div className="text-xs text-gray-400">
-                              até {new Date(contract.end_date).toLocaleDateString('pt-BR')}
+                              até {contract.end_date 
+                                ? new Date(contract.end_date).toLocaleDateString('pt-BR')
+                                : 'Data não definida'
+                              }
                             </div>
                           </div>
                         </td>
