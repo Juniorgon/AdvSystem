@@ -3339,6 +3339,7 @@ Testemunhas:
                   setSearchTerm('');
                   setFilterStatus('all');
                   setFilterClient('all');
+                  setFilterType('all');
                   setSortBy('created_at');
                   setSortOrder('desc');
                 }}
