@@ -2944,11 +2944,14 @@ Testemunhas:
     });
 
     const contractTypes = [
-      { value: 'honorarios', label: 'Honorários Advocatícios' },
-      { value: 'consultoria', label: 'Consultoria Jurídica' },
-      { value: 'assessoria', label: 'Assessoria Legal' },
-      { value: 'representacao', label: 'Representação Processual' },
-      { value: 'outros', label: 'Outros Serviços' }
+      { value: 'honorarios', label: 'Honorários Advocatícios', category: 'extrajudicial' },
+      { value: 'consultoria', label: 'Consultoria Jurídica', category: 'extrajudicial' },
+      { value: 'assessoria', label: 'Assessoria Legal', category: 'extrajudicial' },
+      { value: 'representacao', label: 'Representação Processual', category: 'judicial' },
+      { value: 'acao_civil', label: 'Ação Civil', category: 'judicial' },
+      { value: 'acao_trabalhista', label: 'Ação Trabalhista', category: 'judicial' },
+      { value: 'acao_penal', label: 'Ação Penal', category: 'judicial' },
+      { value: 'outros', label: 'Outros Serviços', category: 'extrajudicial' }
     ];
 
     const handleSubmit = async (e) => {
