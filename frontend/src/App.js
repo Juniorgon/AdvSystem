@@ -3132,12 +3132,12 @@ Testemunhas:
         client_id: contract.client_id,
         title: contract.title,
         description: contract.description,
-        value: contract.value.toString(),
+        value: (contract.value || 0).toString(),
         payment_conditions: contract.payment_conditions,
-        installments: contract.installments.toString(),
+        installments: (contract.installments || 1).toString(),
         status: contract.status,
-        start_date: new Date(contract.start_date).toISOString().split('T')[0],
-        end_date: new Date(contract.end_date).toISOString().split('T')[0],
+        start_date: contract.start_date ? new Date(contract.start_date).toISOString().split('T')[0] : '',
+        end_date: contract.end_date ? new Date(contract.end_date).toISOString().split('T')[0] : '',
         contract_type: contract.contract_type || 'honorarios',
         observations: contract.observations || ''
       });
