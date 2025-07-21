@@ -427,7 +427,7 @@ function App() {
       
       doc.addImage(imgData, 'PNG', 10, 20, imgWidth, imgHeight);
       doc.setFontSize(16);
-      doc.text('Dashboard - GB Advocacia & N. Comin', 10, 15);
+      doc.text('Dashboard - GB & N.Comin Advocacia', 10, 15);
       doc.setFontSize(10);
       doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 10, 10);
       
