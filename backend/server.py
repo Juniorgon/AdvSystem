@@ -194,7 +194,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             "username": lawyer_doc['email'],
             "email": lawyer_doc['email'],
             "full_name": lawyer_doc['full_name'],
-            "role": "lawyer",
+            "role": UserRole.lawyer,
             "branch_id": lawyer_doc['branch_id'],
             "is_active": lawyer_doc['is_active'],
             "created_at": lawyer_doc['created_at']
