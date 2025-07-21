@@ -996,7 +996,7 @@ function App() {
       <div className="p-6 space-y-6 dashboard-export">
         {/* Header with period selector and export buttons */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center space-y-4 lg:space-y-0">
-          <h2 className="text-2xl font-bold text-white">Dashboard - GB Advocacia & N. Comin</h2>
+          <h2 className="text-2xl font-bold text-white">Dashboard - GB & N.Comin Advocacia</h2>
           <div className="flex flex-wrap gap-2">
             <div className="flex space-x-2">
               <button
