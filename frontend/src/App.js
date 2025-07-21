@@ -627,81 +627,125 @@ function App() {
   );
 
   // Login Modal Component
-  const LoginModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 w-full max-w-md">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold text-white">🔐 Login</h3>
-          <button
-            onClick={closeLoginModal}
-            className="text-gray-400 hover:text-white text-xl"
-          >
-            ✕
-          </button>
-        </div>
-        
-        <form onSubmit={handleLoginSubmit} className="space-y-4">
-          <div>
-            <label className="block text-gray-300 text-sm font-medium mb-1">
-              📧 Email ou Usuário
-            </label>
-            <input
-              type="text"
-              name="username_or_email"
-              value={loginForm.username_or_email}
-              onChange={(e) => setLoginForm(prev => ({...prev, username_or_email: e.target.value}))}
-              className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              placeholder="Digite seu email ou nome de usuário"
-              autoComplete="username"
-              required
-            />
-          </div>
-          
-          <div>
-            <label className="block text-gray-300 text-sm font-medium mb-1">
-              🔑 Senha
-            </label>
-            <input
-              type="password"
-              name="password"
-              value={loginForm.password}
-              onChange={(e) => setLoginForm(prev => ({...prev, password: e.target.value}))}
-              className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              placeholder="Digite sua senha"
-              autoComplete="current-password"
-              required
-            />
-          </div>
-          
-          <div className="flex justify-end space-x-2 pt-2">
+  const LoginModal = () => {
+    // Estado local isolado para o formulário de login
+    const [localLoginForm, setLocalLoginForm] = useState({ 
+      username_or_email: '', 
+      password: '' 
+    });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Reset do formulário quando o modal é aberto
+    useEffect(() => {
+      if (showLogin) {
+        setLocalLoginForm({ username_or_email: '', password: '' });
+      }
+    }, [showLogin]);
+
+    const handleInputChange = (field, value) => {
+      setLocalLoginForm(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    };
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      setIsSubmitting(true);
+      
+      try {
+        await login(localLoginForm);
+      } catch (error) {
+        console.error('Login error:', error);
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    const handleClose = () => {
+      setShowLogin(false);
+      setLocalLoginForm({ username_or_email: '', password: '' });
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 w-full max-w-md">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-semibold text-white">🔐 Login - GB & N.Comin Advocacia</h3>
             <button
+              onClick={handleClose}
+              className="text-gray-400 hover:text-white text-xl"
               type="button"
-              onClick={closeLoginModal}
-              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
             >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors font-medium"
-            >
-              🚀 Entrar
+              ✕
             </button>
           </div>
-        </form>
-        
-        <div className="mt-6 p-4 bg-blue-900 bg-opacity-30 border border-blue-600 rounded-lg">
-          <p className="text-blue-200 text-sm">
-            <strong>🎯 Usuários de demonstração:</strong><br/>
-            <strong>Super Admin:</strong> admin / admin123<br/>
-            <strong>Admin Caxias:</strong> admin_caxias / admin123<br/>
-            <strong>Admin Nova Prata:</strong> admin_novaprata / admin123<br/>
-            <strong>Advogados:</strong> email / números OAB
-          </p>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-1">
+                📧 Email ou Usuário
+              </label>
+              <input
+                type="text"
+                value={localLoginForm.username_or_email}
+                onChange={(e) => handleInputChange('username_or_email', e.target.value)}
+                className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                placeholder="Digite seu email ou nome de usuário"
+                autoComplete="username"
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-gray-300 text-sm font-medium mb-1">
+                🔑 Senha
+              </label>
+              <input
+                type="password"
+                value={localLoginForm.password}
+                onChange={(e) => handleInputChange('password', e.target.value)}
+                className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                placeholder="Digite sua senha"
+                autoComplete="current-password"
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-2 pt-2">
+              <button
+                type="button"
+                onClick={handleClose}
+                disabled={isSubmitting}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50"
+              >
+                {isSubmitting ? '⏳ Entrando...' : '🚀 Entrar'}
+              </button>
+            </div>
+          </form>
+          
+          <div className="mt-6 p-4 bg-blue-900 bg-opacity-30 border border-blue-600 rounded-lg">
+            <p className="text-blue-200 text-sm">
+              <strong>🎯 Usuários de demonstração:</strong><br/>
+              <strong>Super Admin:</strong> admin / admin123<br/>
+              <strong>Admin Caxias:</strong> admin_caxias / admin123<br/>
+              <strong>Admin Nova Prata:</strong> admin_novaprata / admin123<br/>
+              <strong>Advogados:</strong> email / números OAB
+            </p>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Register Modal Component
   const RegisterModal = () => (
