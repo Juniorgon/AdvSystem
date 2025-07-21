@@ -1028,11 +1028,11 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
 
 # WhatsApp API Routes
 @api_router.post("/whatsapp/send-reminder/{transaction_id}")
-async def send_manual_reminder(transaction_id: str, current_user: dict = Depends(get_current_user)):
+async def send_manual_reminder(transaction_id: str, current_user: User = Depends(get_current_user)):
     """
     Envia lembrete manual de pagamento via WhatsApp
     """
-    if current_user['role'] not in ['admin', 'lawyer']:
+    if current_user.role not in ['admin', 'lawyer']:
         raise HTTPException(status_code=403, detail="Acesso negado")
     
     result = await payment_reminder_service.send_manual_reminder(transaction_id)
@@ -1043,11 +1043,11 @@ async def send_manual_reminder(transaction_id: str, current_user: dict = Depends
         raise HTTPException(status_code=400, detail=result.get("error", "Erro ao enviar lembrete"))
 
 @api_router.post("/whatsapp/check-payments")
-async def trigger_payment_check(current_user: dict = Depends(get_current_user)):
+async def trigger_payment_check(current_user: User = Depends(get_current_user)):
     """
     Dispara verificação manual de pagamentos pendentes
     """
-    if current_user['role'] not in ['admin']:
+    if current_user.role not in ['admin']:
         raise HTTPException(status_code=403, detail="Apenas administradores podem disparar verificações")
     
     try:
@@ -1057,11 +1057,11 @@ async def trigger_payment_check(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=f"Erro na verificação: {str(e)}")
 
 @api_router.get("/whatsapp/status")
-async def get_whatsapp_status(current_user: dict = Depends(get_current_user)):
+async def get_whatsapp_status(current_user: User = Depends(get_current_user)):
     """
     Retorna status do serviço WhatsApp e jobs agendados
     """
-    if current_user['role'] not in ['admin', 'lawyer']:
+    if current_user.role not in ['admin', 'lawyer']:
         raise HTTPException(status_code=403, detail="Acesso negado")
     
     jobs = payment_scheduler.get_jobs_status()
@@ -1076,12 +1076,12 @@ async def get_whatsapp_status(current_user: dict = Depends(get_current_user)):
 @api_router.post("/whatsapp/send-message")
 async def send_whatsapp_message(
     message_data: dict,
-    current_user: dict = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Envia mensagem personalizada via WhatsApp
     """
-    if current_user['role'] not in ['admin', 'lawyer']:
+    if current_user.role not in ['admin', 'lawyer']:
         raise HTTPException(status_code=403, detail="Acesso negado")
     
     phone_number = message_data.get("phone_number")
