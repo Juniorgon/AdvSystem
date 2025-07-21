@@ -3746,11 +3746,11 @@ Testemunhas:
                         
                         <td className="px-6 py-4">
                           <div className="text-sm font-bold text-green-400">
-                            R$ {contract.value?.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                            R$ {(contract.value || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
                           </div>
-                          {contract.installments > 1 && (
+                          {(contract.installments || 1) > 1 && (
                             <div className="text-xs text-gray-400">
-                              {(contract.value / contract.installments).toLocaleString('pt-BR', {
+                              {((contract.value || 0) / (contract.installments || 1)).toLocaleString('pt-BR', {
                                 style: 'currency',
                                 currency: 'BRL'
                               })} / parcela
