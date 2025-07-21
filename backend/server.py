@@ -26,8 +26,24 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
+# Initialize WhatsApp and Scheduler services
+payment_reminder_service = PaymentReminderService(db)
+payment_scheduler = PaymentScheduler(db)
+whatsapp_service = WhatsAppService()
+
 # Create the main app without a prefix
 app = FastAPI()
+
+# Start scheduler on startup
+@app.on_event("startup")
+async def startup_event():
+    payment_scheduler.start()
+    logging.info("PaymentScheduler iniciado")
+
+@app.on_event("shutdown") 
+async def shutdown_event():
+    payment_scheduler.stop()
+    logging.info("PaymentScheduler parado")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
