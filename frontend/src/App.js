@@ -192,20 +192,9 @@ function App() {
     setCurrentPage('dashboard');
   };
 
-  const handleLoginSubmit = (e) => {
-    e.preventDefault();
-    login(loginForm);
-  };
-
   const handleRegisterSubmit = (e) => {
     e.preventDefault();
     register(registerForm);
-  };
-
-  // Clear login form when modal is closed
-  const closeLoginModal = () => {
-    setShowLogin(false);
-    setLoginForm({ username_or_email: '', password: '' });
   };
 
   // Clear register form when modal is closed
