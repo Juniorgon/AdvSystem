@@ -3769,7 +3769,7 @@ Testemunhas:
                         
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(contract.status)}`}>
-                            {contract.status.charAt(0).toUpperCase() + contract.status.slice(1)}
+                            {contract.status?.charAt(0).toUpperCase() + (contract.status?.slice(1) || '') || 'N/A'}
                           </span>
                           {isExpiring && (
                             <div className="text-xs text-yellow-400 mt-1">
