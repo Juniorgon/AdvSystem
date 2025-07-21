@@ -2642,6 +2642,39 @@ Testemunhas:
       }
     };
 
+    const checkAllPayments = async () => {
+      try {
+        setLoading(true);
+        await axios.post(`${API}/whatsapp/check-payments`);
+        toast.success('Verificação de pagamentos executada! Lembretes enviados via WhatsApp.');
+      } catch (error) {
+        console.error('Error checking payments:', error);
+        const errorMessage = error.response?.data?.detail || 'Erro ao executar verificação de pagamentos';
+        toast.error(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const checkWhatsAppStatus = async () => {
+      try {
+        const response = await axios.get(`${API}/whatsapp/status`);
+        const data = response.data;
+        
+        let statusMessage = `WhatsApp: ${data.whatsapp_enabled ? 'Habilitado' : 'Desabilitado'}\n`;
+        statusMessage += `Scheduler: ${data.scheduler_running ? 'Ativo' : 'Inativo'}\n`;
+        if (data.next_check) {
+          const nextCheck = new Date(data.next_check).toLocaleString('pt-BR');
+          statusMessage += `Próxima verificação: ${nextCheck}`;
+        }
+        
+        toast.info(statusMessage);
+      } catch (error) {
+        console.error('Error checking WhatsApp status:', error);
+        toast.error('Erro ao verificar status do WhatsApp');
+      }
+    };
+
     const filteredTransactions = financialTransactions.filter(transaction => {
       const typeMatch = filterType === 'all' || transaction.type === filterType;
       const statusMatch = filterStatus === 'all' || transaction.status === filterStatus;
