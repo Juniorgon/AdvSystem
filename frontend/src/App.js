@@ -3860,11 +3860,23 @@ Testemunhas:
       try {
         setLoading(true);
         
+        // Get current branch ID
+        const branchId = getCurrentBranchId();
+        if (!branchId) {
+          toast.error('Selecione uma filial antes de criar o advogado.');
+          return;
+        }
+
+        const lawyerData = {
+          ...formData,
+          branch_id: branchId
+        };
+        
         if (editingLawyer) {
-          await axios.put(`${API}/lawyers/${editingLawyer.id}`, formData);
+          await axios.put(`${API}/lawyers/${editingLawyer.id}`, lawyerData);
           toast.success('Advogado atualizado com sucesso!');
         } else {
-          await axios.post(`${API}/lawyers`, formData);
+          await axios.post(`${API}/lawyers`, lawyerData);
           toast.success('Advogado registrado com sucesso!');
         }
         
@@ -3881,11 +3893,7 @@ Testemunhas:
         await fetchLawyers();
       } catch (error) {
         console.error('Error saving lawyer:', error);
-        if (error.response?.status === 400) {
-          toast.error(error.response.data.detail);
-        } else {
-          toast.error('Erro ao salvar advogado. Verifique os dados e tente novamente.');
-        }
+        handleApiError(error, 'Erro ao salvar advogado. Verifique os dados e tente novamente.');
       } finally {
         setLoading(false);
       }
