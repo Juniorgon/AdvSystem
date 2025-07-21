@@ -3239,8 +3239,8 @@ Testemunhas:
         const typeMatch = filterType === 'all' || 
           contractTypes.find(t => t.value === contract.contract_type)?.category === filterType;
         const searchMatch = searchTerm === '' || 
-          contract.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          contract.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (contract.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (contract.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
           getClientName(contract.client_id).toLowerCase().includes(searchTerm.toLowerCase());
         return statusMatch && clientMatch && typeMatch && searchMatch;
       })
