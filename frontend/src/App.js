@@ -541,7 +541,7 @@ function App() {
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <h1 className="text-2xl font-bold text-white">
-            <span className="text-orange-500">GB</span> Advocacia & N. Comin
+            <span className="text-orange-500">GB</span> & N.Comin Advocacia
           </h1>
         </div>
         
