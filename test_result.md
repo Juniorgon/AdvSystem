@@ -360,9 +360,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Contract Judicial/Extrajudicial Filter"
+    []
   stuck_tasks:
-    - "Contract Judicial/Extrajudicial Filter"
+    []
   test_all: false
   test_priority: "high_first"
 
