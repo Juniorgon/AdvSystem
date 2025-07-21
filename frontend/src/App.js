@@ -2910,12 +2910,24 @@ Testemunhas:
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {transaction.status === 'pendente' && (
-                        <button
-                          onClick={() => markAsPaid(transaction.id)}
-                          className="text-green-400 hover:text-green-300 mr-3"
-                        >
-                          Marcar como Pago
-                        </button>
+                        <>
+                          <button
+                            onClick={() => markAsPaid(transaction.id)}
+                            className="text-green-400 hover:text-green-300 mr-3"
+                          >
+                            Marcar como Pago
+                          </button>
+                          {transaction.client_id && (
+                            <button
+                              onClick={() => sendWhatsAppReminder(transaction.id)}
+                              disabled={loading}
+                              className="text-blue-400 hover:text-blue-300 mr-3 disabled:opacity-50"
+                              title="Enviar lembrete via WhatsApp"
+                            >
+                              📱 WhatsApp
+                            </button>
+                          )}
+                        </>
                       )}
                       <button className="text-orange-400 hover:text-orange-300 mr-3">Editar</button>
                       <button className="text-red-400 hover:text-red-300">Excluir</button>
