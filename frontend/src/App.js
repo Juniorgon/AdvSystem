@@ -3102,7 +3102,9 @@ Testemunhas:
 
     const getContractTypeLabel = (type) => {
       const contractType = contractTypes.find(t => t.value === type);
-      return contractType ? contractType.label : 'Tipo não informado';
+      if (!contractType) return 'Tipo não informado';
+      const icon = contractType.category === 'judicial' ? '⚖️' : '📋';
+      return `${icon} ${contractType.label}`;
     };
 
     // Filtered and sorted contracts
