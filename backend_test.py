@@ -952,8 +952,170 @@ class BackendTester:
             except Exception as e:
                 print(f"❌ Exception deleting client {client_id}: {str(e)}")
     
+    def test_whatsapp_integration_api(self):
+        """Test WhatsApp Business Integration API - Payment reminders and messaging"""
+        print("\n=== Testing WhatsApp Business Integration API ===")
+        
+        # Ensure we have authentication
+        if 'super_admin' not in self.auth_tokens:
+            self.login_super_admin()
+        
+        if not self.auth_tokens.get('super_admin'):
+            self.log_test("WhatsApp Integration Prerequisites", False, "No admin authentication available")
+            return
+        
+        auth_header = {'Authorization': f'Bearer {self.auth_tokens["super_admin"]}'}
+        
+        # Test 1: Get WhatsApp Status
+        try:
+            response = self.session.get(f"{API_BASE_URL}/whatsapp/status", headers=auth_header)
+            if response.status_code == 200:
+                status_data = response.json()
+                self.log_test("WhatsApp Status Endpoint", True, "Retrieved WhatsApp service status")
+                
+                # Verify status structure
+                required_fields = ['whatsapp_enabled', 'scheduler_running', 'jobs']
+                missing_fields = [field for field in required_fields if field not in status_data]
+                if missing_fields:
+                    self.log_test("WhatsApp Status Structure", False, f"Missing fields: {missing_fields}")
+                else:
+                    self.log_test("WhatsApp Status Structure", True, "All required status fields present")
+                    
+                # Log status details
+                print(f"   📱 WhatsApp Enabled: {status_data.get('whatsapp_enabled')}")
+                print(f"   ⏰ Scheduler Running: {status_data.get('scheduler_running')}")
+                print(f"   📋 Jobs Count: {len(status_data.get('jobs', []))}")
+                
+                # Verify scheduler jobs
+                jobs = status_data.get('jobs', [])
+                if jobs:
+                    job_names = [job.get('name', '') for job in jobs]
+                    expected_jobs = ['Verificação diária de pagamentos', 'Verificação vespertina de pagamentos']
+                    jobs_found = [name for name in expected_jobs if any(name in job_name for job_name in job_names)]
+                    
+                    if len(jobs_found) >= 2:
+                        self.log_test("WhatsApp Scheduler Jobs", True, f"Found payment verification jobs: {len(jobs_found)}")
+                    else:
+                        self.log_test("WhatsApp Scheduler Jobs", False, f"Expected 2 jobs, found: {jobs_found}")
+                else:
+                    self.log_test("WhatsApp Scheduler Jobs", False, "No scheduler jobs found")
+                    
+            else:
+                self.log_test("WhatsApp Status Endpoint", False, f"HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_test("WhatsApp Status Endpoint", False, f"Exception: {str(e)}")
+        
+        # Test 2: Send Custom WhatsApp Message
+        custom_message_data = {
+            "phone_number": "(11) 99999-8888",
+            "message": "Teste de mensagem personalizada do sistema GB & N.Comin Advocacia"
+        }
+        
+        try:
+            response = self.session.post(f"{API_BASE_URL}/whatsapp/send-message", 
+                                       json=custom_message_data, headers=auth_header)
+            if response.status_code == 200:
+                message_result = response.json()
+                self.log_test("WhatsApp Send Custom Message", True, "Custom message sent successfully")
+                
+                # Verify response structure
+                if 'message' in message_result:
+                    self.log_test("WhatsApp Message Response Structure", True, "Response contains success message")
+                else:
+                    self.log_test("WhatsApp Message Response Structure", False, "Response missing success message")
+            else:
+                self.log_test("WhatsApp Send Custom Message", False, f"HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_test("WhatsApp Send Custom Message", False, f"Exception: {str(e)}")
+        
+        # Test 3: Send Manual Payment Reminder (requires transaction)
+        if self.created_entities['financial_transactions']:
+            transaction_id = self.created_entities['financial_transactions'][0]
+            
+            try:
+                response = self.session.post(f"{API_BASE_URL}/whatsapp/send-reminder/{transaction_id}", 
+                                           headers=auth_header)
+                if response.status_code == 200:
+                    reminder_result = response.json()
+                    self.log_test("WhatsApp Manual Payment Reminder", True, "Manual payment reminder sent successfully")
+                    
+                    # Verify response structure
+                    if 'message' in reminder_result:
+                        self.log_test("WhatsApp Reminder Response Structure", True, "Response contains success message")
+                    else:
+                        self.log_test("WhatsApp Reminder Response Structure", False, "Response missing success message")
+                else:
+                    self.log_test("WhatsApp Manual Payment Reminder", False, f"HTTP {response.status_code}", response.text)
+            except Exception as e:
+                self.log_test("WhatsApp Manual Payment Reminder", False, f"Exception: {str(e)}")
+        else:
+            self.log_test("WhatsApp Manual Payment Reminder", False, "No financial transactions available for testing")
+        
+        # Test 4: Trigger Payment Check (Admin only)
+        try:
+            response = self.session.post(f"{API_BASE_URL}/whatsapp/check-payments", headers=auth_header)
+            if response.status_code == 200:
+                check_result = response.json()
+                self.log_test("WhatsApp Trigger Payment Check", True, "Payment check triggered successfully")
+                
+                # Verify response structure
+                if 'message' in check_result:
+                    self.log_test("WhatsApp Payment Check Response", True, "Response contains success message")
+                else:
+                    self.log_test("WhatsApp Payment Check Response", False, "Response missing success message")
+            else:
+                self.log_test("WhatsApp Trigger Payment Check", False, f"HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_test("WhatsApp Trigger Payment Check", False, f"Exception: {str(e)}")
+        
+        # Test 5: Test Authentication Requirements (try with lawyer token if available)
+        if 'test_lawyer' in self.auth_tokens:
+            lawyer_header = {'Authorization': f'Bearer {self.auth_tokens["test_lawyer"]}'}
+            
+            try:
+                # Lawyer should be able to access status
+                response = self.session.get(f"{API_BASE_URL}/whatsapp/status", headers=lawyer_header)
+                if response.status_code == 200:
+                    self.log_test("WhatsApp Lawyer Access - Status", True, "Lawyer can access WhatsApp status")
+                else:
+                    self.log_test("WhatsApp Lawyer Access - Status", False, f"HTTP {response.status_code}")
+                
+                # Lawyer should NOT be able to trigger payment checks (admin only)
+                response = self.session.post(f"{API_BASE_URL}/whatsapp/check-payments", headers=lawyer_header)
+                if response.status_code == 403:
+                    self.log_test("WhatsApp Admin-Only Access Control", True, "Correctly blocked lawyer from admin-only endpoint")
+                else:
+                    self.log_test("WhatsApp Admin-Only Access Control", False, f"Expected 403, got {response.status_code}")
+                    
+            except Exception as e:
+                self.log_test("WhatsApp Authentication Tests", False, f"Exception: {str(e)}")
+        
+        # Test 6: Test Invalid Requests
+        # Test with invalid transaction ID
+        try:
+            response = self.session.post(f"{API_BASE_URL}/whatsapp/send-reminder/invalid-id", 
+                                       headers=auth_header)
+            if response.status_code == 400:
+                self.log_test("WhatsApp Invalid Transaction ID", True, "Correctly rejected invalid transaction ID")
+            else:
+                self.log_test("WhatsApp Invalid Transaction ID", False, f"Expected 400, got {response.status_code}")
+        except Exception as e:
+            self.log_test("WhatsApp Invalid Transaction ID", False, f"Exception: {str(e)}")
+        
+        # Test with missing message data
+        try:
+            response = self.session.post(f"{API_BASE_URL}/whatsapp/send-message", 
+                                       json={"phone_number": "(11) 99999-8888"}, # Missing message
+                                       headers=auth_header)
+            if response.status_code == 400:
+                self.log_test("WhatsApp Missing Message Data", True, "Correctly rejected incomplete message data")
+            else:
+                self.log_test("WhatsApp Missing Message Data", False, f"Expected 400, got {response.status_code}")
+        except Exception as e:
+            self.log_test("WhatsApp Missing Message Data", False, f"Exception: {str(e)}")
+
     def run_all_tests(self):
-        """Run all backend API tests including multi-branch system"""
+        """Run all backend API tests including multi-branch system and WhatsApp integration"""
         print(f"🚀 Starting Backend API Tests for GB Advocacia & N. Comin")
         print(f"📡 Backend URL: {API_BASE_URL}")
         print("=" * 80)
@@ -969,6 +1131,9 @@ class BackendTester:
             self.test_contract_management_api()
             self.test_dashboard_statistics_api()
             self.test_data_relationships()
+            
+            # Test WhatsApp integration
+            self.test_whatsapp_integration_api()
             
         finally:
             # Always cleanup
