@@ -521,7 +521,8 @@ class BackendTester:
         print("\n=== Testing Dashboard Statistics API ===")
         
         try:
-            response = self.session.get(f"{API_BASE_URL}/dashboard")
+            headers = {'Authorization': f'Bearer {self.auth_tokens.get("super_admin")}'} if 'super_admin' in self.auth_tokens else {}
+            response = self.session.get(f"{API_BASE_URL}/dashboard", headers=headers)
             if response.status_code == 200:
                 stats = response.json()
                 self.log_test("Get Dashboard Statistics", True, "Retrieved dashboard statistics")
