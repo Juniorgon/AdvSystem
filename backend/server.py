@@ -964,6 +964,13 @@ async def create_lawyer(lawyer: LawyerCreate, current_user: User = Depends(get_c
 
 @api_router.get("/lawyers", response_model=List[Lawyer])
 async def get_lawyers(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Only admins can view lawyer list
+    if current_user.role != UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Apenas administradores podem visualizar a lista de advogados"
+        )
+    
     accessible_branches = get_accessible_branches(current_user, db)
     
     query = db.query(DBLawyer).filter(DBLawyer.is_active == True)
