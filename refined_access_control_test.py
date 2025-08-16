@@ -298,12 +298,16 @@ class RefinedAccessControlTester:
             self.log_test("Branch Access Test Prerequisites", False, "Nova Prata branch not available")
             return
         
+        # Generate unique OAB number based on timestamp
+        import time
+        unique_oab = f"{int(time.time()) % 1000000 + 1}"
+        
         # Create a lawyer restricted to Nova Prata branch only
         lawyer_data = {
             "full_name": "Dr. Advogado Nova Prata",
-            "oab_number": "777666",
+            "oab_number": unique_oab,
             "oab_state": "RS",
-            "email": "advogado.novaprata@gbadvocacia.com",
+            "email": f"advogado.novaprata.{unique_oab}@gbadvocacia.com",
             "phone": "(54) 99999-7777",
             "specialization": "Direito Trabalhista",
             "branch_id": self.branch_ids['nova_prata'],
