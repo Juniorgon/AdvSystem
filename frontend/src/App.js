@@ -3195,7 +3195,37 @@ Testemunhas:
     );
   };
 
+  // Financial Component with Enhanced Access Control
   const Financial = () => {
+    // Check if user has financial access permission
+    if (!userPermissions?.canAccessFinancialData) {
+      return (
+        <div className="p-6">
+          <div className="bg-red-900 bg-opacity-30 border border-red-600 rounded-lg p-8 text-center">
+            <div className="text-6xl mb-6">🚫</div>
+            <h2 className="text-2xl font-bold text-red-400 mb-4">Acesso Restrito</h2>
+            <div className="text-red-200 space-y-3">
+              <p className="text-lg">
+                Você não tem permissão para acessar os dados financeiros do sistema.
+              </p>
+              <p>
+                Esta funcionalidade está restrita conforme as configurações do seu perfil de usuário.
+              </p>
+              <div className="bg-red-800 bg-opacity-50 rounded-lg p-4 mt-6">
+                <p className="text-sm text-red-100">
+                  <strong>Para solicitar acesso:</strong>
+                  <br />
+                  • Entre em contato com o administrador do sistema
+                  <br />
+                  • Solicite que seja habilitado o acesso aos dados financeiros em seu cadastro de advogado
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     const [showForm, setShowForm] = useState(false);
     const [filterType, setFilterType] = useState('all');
     const [filterStatus, setFilterStatus] = useState('all');
