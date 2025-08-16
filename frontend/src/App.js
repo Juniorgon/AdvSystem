@@ -4747,6 +4747,28 @@ Testemunhas:
     );
   };
 
+  // Agenda Component (placeholder)
+  const Agenda = () => {
+    return (
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-white">📅 Agenda</h1>
+            <p className="text-gray-300">Gerencie seus compromissos e eventos</p>
+          </div>
+        </div>
+        
+        <div className="bg-gray-800 rounded-lg shadow-lg p-8 text-center">
+          <div className="text-6xl mb-4">🚧</div>
+          <h2 className="text-xl font-bold text-white mb-2">Em Desenvolvimento</h2>
+          <p className="text-gray-400">
+            A funcionalidade de agenda está sendo desenvolvida e estará disponível em breve.
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   const renderCurrentPage = () => {
     switch(currentPage) {
       case 'dashboard':
