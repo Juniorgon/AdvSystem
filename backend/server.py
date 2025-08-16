@@ -1202,6 +1202,41 @@ async def update_task(task_id: str, task_update: TaskUpdate, db: Session = Depen
     
     return Task.from_orm(task_db)
 
+# Security endpoints
+@api_router.get("/security/report")
+async def get_security_report(current_user: User = Depends(get_current_user)):
+    """Get security report - Admin only"""
+    if current_user.role != UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can access security reports"
+        )
+    
+    report = security_manager.generate_security_report()
+    return report
+
+@api_router.post("/security/generate-password")
+async def generate_secure_password(current_user: User = Depends(get_current_user)):
+    """Generate a secure password - Admin only"""
+    if current_user.role != UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can generate passwords"
+        )
+    
+    password = PasswordValidator.generate_secure_password()
+    return {"password": password}
+
+@api_router.post("/security/validate-password")
+async def validate_password_strength(password: str, username: str = "", current_user: User = Depends(get_current_user)):
+    """Validate password strength"""
+    is_valid, errors = PasswordValidator.validate_password(password, username)
+    return {
+        "valid": is_valid,
+        "errors": errors,
+        "strength_score": 100 if is_valid else max(0, 100 - len(errors) * 20)
+    }
+
 # Google Drive endpoints
 @api_router.get("/google-drive/status")
 async def get_google_drive_status(current_user: User = Depends(get_current_user)):
