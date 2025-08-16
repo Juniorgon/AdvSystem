@@ -1482,6 +1482,14 @@ function App() {
     });
   };
 
+  // Handle address fields directly in formData (no longer nested)
+  const handleAddressChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
     const fetchClientProcesses = async (clientId) => {
       try {
         const response = await axios.get(`${API}/clients/${clientId}/processes`);
