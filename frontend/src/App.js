@@ -1249,31 +1249,57 @@ function App() {
             </div>
           </div>
           
-          <div className="card-gradient-green p-6 rounded-lg shadow-lg card-hover animate-fadeIn" style={{animationDelay: '0.2s'}}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-green-100 text-sm">Receita Total</p>
-                <p className="text-3xl font-bold text-white">
-                  R$ {dashboardStats.total_revenue?.toLocaleString('pt-BR', {minimumFractionDigits: 2}) || '0,00'}
-                </p>
-                <p className="text-green-200 text-xs mt-1">Acumulado</p>
+          {userPermissions?.canAccessFinancialData ? (
+            <div className="card-gradient-green p-6 rounded-lg shadow-lg card-hover animate-fadeIn" style={{animationDelay: '0.2s'}}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-100 text-sm">Receita Total</p>
+                  <p className="text-3xl font-bold text-white">
+                    R$ {dashboardStats.total_revenue?.toLocaleString('pt-BR', {minimumFractionDigits: 2}) || '0,00'}
+                  </p>
+                  <p className="text-green-200 text-xs mt-1">Acumulado</p>
+                </div>
+                <div className="text-white text-4xl animate-pulse">📈</div>
               </div>
-              <div className="text-white text-4xl animate-pulse">📈</div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-red-900 bg-opacity-30 border border-red-600 p-6 rounded-lg shadow-lg animate-fadeIn" style={{animationDelay: '0.2s'}}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-red-300 text-sm">Receita Total</p>
+                  <p className="text-xl font-bold text-red-400">Acesso Restrito</p>
+                  <p className="text-red-300 text-xs mt-1">Sem permissão</p>
+                </div>
+                <div className="text-red-400 text-4xl">🚫</div>
+              </div>
+            </div>
+          )}
           
-          <div className="card-gradient-red p-6 rounded-lg shadow-lg card-hover animate-fadeIn" style={{animationDelay: '0.3s'}}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-red-100 text-sm">Despesas Total</p>
-                <p className="text-3xl font-bold text-white">
-                  R$ {dashboardStats.total_expenses?.toLocaleString('pt-BR', {minimumFractionDigits: 2}) || '0,00'}
-                </p>
-                <p className="text-red-200 text-xs mt-1">Acumulado</p>
+          {userPermissions?.canAccessFinancialData ? (
+            <div className="card-gradient-red p-6 rounded-lg shadow-lg card-hover animate-fadeIn" style={{animationDelay: '0.3s'}}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-red-100 text-sm">Despesas Total</p>
+                  <p className="text-3xl font-bold text-white">
+                    R$ {dashboardStats.total_expenses?.toLocaleString('pt-BR', {minimumFractionDigits: 2}) || '0,00'}
+                  </p>
+                  <p className="text-red-200 text-xs mt-1">Acumulado</p>
+                </div>
+                <div className="text-white text-4xl animate-pulse">📉</div>
               </div>
-              <div className="text-white text-4xl animate-pulse">📉</div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-red-900 bg-opacity-30 border border-red-600 p-6 rounded-lg shadow-lg animate-fadeIn" style={{animationDelay: '0.3s'}}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-red-300 text-sm">Despesas Total</p>
+                  <p className="text-xl font-bold text-red-400">Acesso Restrito</p>
+                  <p className="text-red-300 text-xs mt-1">Sem permissão</p>
+                </div>
+                <div className="text-red-400 text-4xl">🚫</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Secondary KPI Cards */}
