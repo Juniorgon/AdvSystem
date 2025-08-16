@@ -1421,15 +1421,66 @@ function App() {
       }
     };
 
-    const handleAddressChange = (field, value) => {
-      setFormData(prev => ({
-        ...prev,
-        address: {
-          ...prev.address,
-          [field]: value
-        }
-      }));
-    };
+  const resetFormData = () => {
+    setFormData({
+      name: '',
+      nationality: '',
+      civil_status: '',
+      profession: '',
+      cpf: '',
+      street: '',
+      number: '',
+      city: '',
+      district: '',
+      state: '',
+      complement: '',
+      phone: '',
+      client_type: 'individual',
+      branch_id: getCurrentBranchId() || ''
+    });
+  };
+
+  const resetProcessForm = () => {
+    setProcessForm({
+      client_id: '',
+      process_number: '',
+      type: '',
+      status: '',
+      value: 0,
+      description: '',
+      role: 'creditor',
+      responsible_lawyer_id: '',
+      branch_id: getCurrentBranchId() || ''
+    });
+  };
+
+  const resetLawyerForm = () => {
+    setLawyerForm({
+      full_name: '',
+      oab_number: '',
+      oab_state: 'RS',
+      email: '',
+      phone: '',
+      specialization: '',
+      branch_id: getCurrentBranchId() || '',
+      access_financial_data: true,
+      allowed_branch_ids: []
+    });
+  };
+
+  const resetTaskForm = () => {
+    setTaskForm({
+      title: '',
+      description: '',
+      due_date: '',
+      priority: 'medium',
+      status: 'pending',
+      assigned_lawyer_id: '',
+      client_id: '',
+      process_id: '',
+      branch_id: getCurrentBranchId() || ''
+    });
+  };
 
     const fetchClientProcesses = async (clientId) => {
       try {
