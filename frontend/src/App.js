@@ -4395,6 +4395,10 @@ Testemunhas:
     switch(currentPage) {
       case 'dashboard':
         return <Dashboard />;
+      case 'tasks':
+        return <Tasks />;
+      case 'agenda':
+        return <Agenda />;
       case 'clients':
         return <Clients />;
       case 'processes':
