@@ -62,11 +62,26 @@ function App() {
     branch_id: ''
   });
 
-  // Branch State
-  const [branches, setBranches] = useState([]);
-  const [selectedBranch, setSelectedBranch] = useState(null);
-  const [showBranchDrawer, setShowBranchDrawer] = useState(false);
-  const [loading, setLoading] = useState(false);
+  // State for new features
+  const [tasks, setTasks] = useState([]);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [taskForm, setTaskForm] = useState({
+    title: '',
+    description: '',
+    due_date: '',
+    priority: 'medium',
+    status: 'pending',
+    assigned_lawyer_id: '',
+    client_id: '',
+    process_id: '',
+    branch_id: ''
+  });
+
+  // User permission states
+  const [userPermissions, setUserPermissions] = useState({
+    canAccessFinancialData: true,
+    allowedBranches: []
+  });
 
   // Check authentication on component mount
   useEffect(() => {
