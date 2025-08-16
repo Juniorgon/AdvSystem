@@ -1452,6 +1452,324 @@ class BackendTester:
         except Exception as e:
             self.log_test("WhatsApp Missing Message Data", False, f"Exception: {str(e)}")
 
+    def test_whatsapp_integration_fixes(self):
+        """Test WhatsApp Integration Fixes - Focus on endpoints that were returning 404"""
+        print("\n=== Testing WhatsApp Integration Fixes ===")
+        
+        # Ensure we have authentication
+        if 'super_admin' not in self.auth_tokens:
+            self.login_super_admin()
+        
+        admin_header = {'Authorization': f'Bearer {self.auth_tokens["super_admin"]}'}
+        
+        # Test 1: GET /api/whatsapp/status (should now work, not 404)
+        try:
+            response = self.session.get(f"{API_BASE_URL}/whatsapp/status", headers=admin_header)
+            if response.status_code == 200:
+                status_data = response.json()
+                self.log_test("WhatsApp Status Endpoint Fix", True, f"Status endpoint accessible: {status_data.get('service_status', 'unknown')}")
+                
+                # Verify expected fields in response
+                expected_fields = ['service_status', 'whatsapp_enabled', 'mode', 'phone_number', 'scheduler_jobs']
+                missing_fields = [field for field in expected_fields if field not in status_data]
+                if missing_fields:
+                    self.log_test("WhatsApp Status Response Fields", False, f"Missing fields: {missing_fields}")
+                else:
+                    self.log_test("WhatsApp Status Response Fields", True, "All expected status fields present")
+                    
+                # Verify scheduler info
+                if 'scheduler_jobs' in status_data and len(status_data['scheduler_jobs']) >= 2:
+                    self.log_test("WhatsApp Scheduler Jobs", True, f"Found {len(status_data['scheduler_jobs'])} scheduler jobs")
+                else:
+                    self.log_test("WhatsApp Scheduler Jobs", False, "Expected scheduler jobs not found")
+                    
+            elif response.status_code == 404:
+                self.log_test("WhatsApp Status Endpoint Fix", False, "Still returning 404 - endpoint not found")
+            else:
+                self.log_test("WhatsApp Status Endpoint Fix", False, f"HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_test("WhatsApp Status Endpoint Fix", False, f"Exception: {str(e)}")
+        
+        # Test 2: POST /api/whatsapp/send-message (should now work, not 404)
+        message_data = {
+            "phone_number": "+55 54 99710-2525",
+            "message": "Teste de mensagem WhatsApp - Sistema GB Advocacia"
+        }
+        
+        try:
+            response = self.session.post(f"{API_BASE_URL}/whatsapp/send-message", json=message_data, headers=admin_header)
+            if response.status_code == 200:
+                result = response.json()
+                self.log_test("WhatsApp Send Message Endpoint Fix", True, f"Message endpoint accessible: {result.get('success', False)}")
+                
+                # Verify response structure
+                if result.get('success') and 'simulated' in result:
+                    self.log_test("WhatsApp Message Response", True, f"Message sent (simulated: {result.get('simulated', False)})")
+                else:
+                    self.log_test("WhatsApp Message Response", False, "Unexpected response structure")
+                    
+            elif response.status_code == 404:
+                self.log_test("WhatsApp Send Message Endpoint Fix", False, "Still returning 404 - endpoint not found")
+            else:
+                self.log_test("WhatsApp Send Message Endpoint Fix", False, f"HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_test("WhatsApp Send Message Endpoint Fix", False, f"Exception: {str(e)}")
+        
+        # Test 3: POST /api/whatsapp/check-payments (admin-only bulk verification)
+        try:
+            response = self.session.post(f"{API_BASE_URL}/whatsapp/check-payments", headers=admin_header)
+            if response.status_code == 200:
+                result = response.json()
+                self.log_test("WhatsApp Check Payments Endpoint Fix", True, f"Bulk check endpoint accessible")
+                
+                # Verify response structure
+                expected_fields = ['checked_transactions', 'reminders_sent', 'simulated']
+                if all(field in result for field in expected_fields):
+                    self.log_test("WhatsApp Bulk Check Response", True, f"Checked {result.get('checked_transactions', 0)} transactions")
+                else:
+                    self.log_test("WhatsApp Bulk Check Response", False, "Missing expected response fields")
+                    
+            elif response.status_code == 404:
+                self.log_test("WhatsApp Check Payments Endpoint Fix", False, "Still returning 404 - endpoint not found")
+            else:
+                self.log_test("WhatsApp Check Payments Endpoint Fix", False, f"HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_test("WhatsApp Check Payments Endpoint Fix", False, f"Exception: {str(e)}")
+        
+        # Test 4: POST /api/whatsapp/send-reminder/{transaction_id} (manual payment reminder)
+        # First create a transaction to test with
+        if self.created_entities['financial_transactions']:
+            transaction_id = self.created_entities['financial_transactions'][0]
+            
+            try:
+                response = self.session.post(f"{API_BASE_URL}/whatsapp/send-reminder/{transaction_id}", headers=admin_header)
+                if response.status_code == 200:
+                    result = response.json()
+                    self.log_test("WhatsApp Send Reminder Endpoint Fix", True, f"Manual reminder endpoint accessible")
+                    
+                    # Verify response structure
+                    expected_fields = ['success', 'client_name', 'phone_number', 'transaction_id']
+                    if all(field in result for field in expected_fields):
+                        self.log_test("WhatsApp Reminder Response", True, f"Reminder sent to {result.get('client_name', 'unknown')}")
+                    else:
+                        self.log_test("WhatsApp Reminder Response", False, "Missing expected response fields")
+                        
+                elif response.status_code == 404:
+                    self.log_test("WhatsApp Send Reminder Endpoint Fix", False, "Still returning 404 - endpoint not found")
+                else:
+                    self.log_test("WhatsApp Send Reminder Endpoint Fix", False, f"HTTP {response.status_code}", response.text)
+            except Exception as e:
+                self.log_test("WhatsApp Send Reminder Endpoint Fix", False, f"Exception: {str(e)}")
+        else:
+            self.log_test("WhatsApp Send Reminder Endpoint Fix", False, "No transaction available for testing")
+        
+        # Test 5: Test lawyer access (should work for status and send-message)
+        if 'test_lawyer' in self.auth_tokens:
+            lawyer_header = {'Authorization': f'Bearer {self.auth_tokens["test_lawyer"]}'}
+            
+            try:
+                response = self.session.get(f"{API_BASE_URL}/whatsapp/status", headers=lawyer_header)
+                if response.status_code == 200:
+                    self.log_test("WhatsApp Lawyer Access - Status Fix", True, "Lawyers can access WhatsApp status")
+                else:
+                    self.log_test("WhatsApp Lawyer Access - Status Fix", False, f"HTTP {response.status_code}")
+            except Exception as e:
+                self.log_test("WhatsApp Lawyer Access - Status Fix", False, f"Exception: {str(e)}")
+            
+            # Test lawyer cannot access admin-only bulk check
+            try:
+                response = self.session.post(f"{API_BASE_URL}/whatsapp/check-payments", headers=lawyer_header)
+                if response.status_code == 403:
+                    self.log_test("WhatsApp Lawyer Access Control Fix", True, "Lawyers correctly blocked from admin-only bulk check")
+                else:
+                    self.log_test("WhatsApp Lawyer Access Control Fix", False, f"Expected 403, got {response.status_code}")
+            except Exception as e:
+                self.log_test("WhatsApp Lawyer Access Control Fix", False, f"Exception: {str(e)}")
+
+    def test_google_drive_integration_fixes(self):
+        """Test Google Drive Integration Fixes - Focus on better error handling"""
+        print("\n=== Testing Google Drive Integration Fixes ===")
+        
+        # Ensure we have authentication
+        if 'super_admin' not in self.auth_tokens:
+            self.login_super_admin()
+        
+        admin_header = {'Authorization': f'Bearer {self.auth_tokens["super_admin"]}'}
+        
+        # Test 1: GET /api/google-drive/status (should provide clear error about missing credentials)
+        try:
+            response = self.session.get(f"{API_BASE_URL}/google-drive/status", headers=admin_header)
+            if response.status_code == 200:
+                status_data = response.json()
+                self.log_test("Google Drive Status Endpoint Fix", True, "Status endpoint accessible")
+                
+                # Verify expected fields in response
+                expected_fields = ['configured', 'credentials_file_exists', 'service_available', 'message']
+                missing_fields = [field for field in expected_fields if field not in status_data]
+                if missing_fields:
+                    self.log_test("Google Drive Status Response Fields", False, f"Missing fields: {missing_fields}")
+                else:
+                    self.log_test("Google Drive Status Response Fields", True, "All expected status fields present")
+                
+                # Verify clear error message about missing credentials
+                if not status_data.get('configured', True):
+                    message = status_data.get('message', '')
+                    if 'google_credentials.json' in message.lower():
+                        self.log_test("Google Drive Error Message Fix", True, "Clear error message about missing credentials file")
+                    else:
+                        self.log_test("Google Drive Error Message Fix", False, f"Unclear error message: {message}")
+                else:
+                    self.log_test("Google Drive Configuration Check", True, "Google Drive appears to be configured")
+                    
+            else:
+                self.log_test("Google Drive Status Endpoint Fix", False, f"HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_test("Google Drive Status Endpoint Fix", False, f"Exception: {str(e)}")
+        
+        # Test 2: GET /api/google-drive/auth-url (should provide clear error about missing credentials)
+        try:
+            response = self.session.get(f"{API_BASE_URL}/google-drive/auth-url", headers=admin_header)
+            if response.status_code == 400:
+                error_data = response.json()
+                error_detail = error_data.get('detail', '')
+                if 'google_credentials.json' in error_detail.lower():
+                    self.log_test("Google Drive Auth URL Error Handling Fix", True, "Clear error message about missing credentials file")
+                else:
+                    self.log_test("Google Drive Auth URL Error Handling Fix", False, f"Unclear error message: {error_detail}")
+            elif response.status_code == 200:
+                # If credentials exist, this should work
+                auth_data = response.json()
+                if 'authorization_url' in auth_data:
+                    self.log_test("Google Drive Auth URL Generation", True, "Authorization URL generated successfully")
+                else:
+                    self.log_test("Google Drive Auth URL Generation", False, "Missing authorization_url in response")
+            else:
+                self.log_test("Google Drive Auth URL Error Handling Fix", False, f"HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_test("Google Drive Auth URL Error Handling Fix", False, f"Exception: {str(e)}")
+        
+        # Test 3: POST /api/google-drive/generate-procuracao (test error handling)
+        if self.created_entities['clients']:
+            client_id = self.created_entities['clients'][0]
+            procuracao_data = {
+                "client_id": client_id,
+                "process_id": self.created_entities['processes'][0] if self.created_entities['processes'] else None
+            }
+            
+            try:
+                response = self.session.post(f"{API_BASE_URL}/google-drive/generate-procuracao", 
+                                           json=procuracao_data, headers=admin_header)
+                if response.status_code == 500:
+                    error_data = response.json()
+                    error_detail = error_data.get('detail', '')
+                    if 'google' in error_detail.lower() or 'drive' in error_detail.lower():
+                        self.log_test("Google Drive Document Generation Error Fix", True, "Clear error message about Google Drive configuration")
+                    else:
+                        self.log_test("Google Drive Document Generation Error Fix", False, f"Unclear error message: {error_detail}")
+                elif response.status_code == 200:
+                    # If credentials exist and configured, this should work
+                    result = response.json()
+                    if 'drive_link' in result:
+                        self.log_test("Google Drive Document Generation", True, "Document generated successfully")
+                    else:
+                        self.log_test("Google Drive Document Generation", False, "Missing drive_link in response")
+                else:
+                    self.log_test("Google Drive Document Generation Error Fix", False, f"HTTP {response.status_code}", response.text)
+            except Exception as e:
+                self.log_test("Google Drive Document Generation Error Fix", False, f"Exception: {str(e)}")
+        else:
+            self.log_test("Google Drive Document Generation", False, "No client available for testing")
+        
+        # Test 4: GET /api/google-drive/client-documents/{client_id} (test error handling)
+        if self.created_entities['clients']:
+            client_id = self.created_entities['clients'][0]
+            
+            try:
+                response = self.session.get(f"{API_BASE_URL}/google-drive/client-documents/{client_id}", headers=admin_header)
+                if response.status_code == 500:
+                    error_data = response.json()
+                    error_detail = error_data.get('detail', '')
+                    if 'google' in error_detail.lower() or 'drive' in error_detail.lower():
+                        self.log_test("Google Drive Client Documents Error Fix", True, "Clear error message about Google Drive configuration")
+                    else:
+                        self.log_test("Google Drive Client Documents Error Fix", False, f"Unclear error message: {error_detail}")
+                elif response.status_code == 200:
+                    # If credentials exist and configured, this should work
+                    documents = response.json()
+                    if isinstance(documents, list):
+                        self.log_test("Google Drive Client Documents", True, f"Retrieved {len(documents)} client documents")
+                    else:
+                        self.log_test("Google Drive Client Documents", False, "Invalid response format")
+                else:
+                    self.log_test("Google Drive Client Documents Error Fix", False, f"HTTP {response.status_code}", response.text)
+            except Exception as e:
+                self.log_test("Google Drive Client Documents Error Fix", False, f"Exception: {str(e)}")
+        else:
+            self.log_test("Google Drive Client Documents", False, "No client available for testing")
+        
+        # Test 5: Test admin-only access control
+        if 'test_lawyer' in self.auth_tokens:
+            lawyer_header = {'Authorization': f'Bearer {self.auth_tokens["test_lawyer"]}'}
+            
+            try:
+                response = self.session.get(f"{API_BASE_URL}/google-drive/status", headers=lawyer_header)
+                if response.status_code == 403:
+                    self.log_test("Google Drive Access Control Fix", True, "Non-admin users correctly blocked from Google Drive endpoints")
+                else:
+                    self.log_test("Google Drive Access Control Fix", False, f"Expected 403, got {response.status_code}")
+            except Exception as e:
+                self.log_test("Google Drive Access Control Fix", False, f"Exception: {str(e)}")
+
+    def run_integration_fixes_tests(self):
+        """Run focused tests on WhatsApp and Google Drive integration fixes"""
+        print(f"🔧 Starting Integration Fixes Tests for GB Advocacia System")
+        print(f"🌐 Backend URL: {API_BASE_URL}")
+        print("=" * 80)
+        
+        try:
+            # Login as super admin first
+            if not self.login_super_admin():
+                print("❌ Failed to login as super admin. Cannot proceed with tests.")
+                return self.test_results
+            
+            # Create minimal test data needed for integration tests
+            self.test_client_management_api()  # Create clients
+            self.test_financial_transaction_api()  # Create transactions for WhatsApp testing
+            self.test_lawyer_management_and_authentication()  # Create lawyers for access control testing
+            
+            # Run integration fix tests
+            self.test_whatsapp_integration_fixes()
+            self.test_google_drive_integration_fixes()
+            
+            # Verify core database functionality still works
+            self.test_dashboard_statistics_api()
+            
+        finally:
+            # Cleanup created entities
+            self.cleanup_test_data()
+        
+        # Print final results
+        print("\n" + "=" * 80)
+        print("🏁 INTEGRATION FIXES TEST RESULTS")
+        print("=" * 80)
+        
+        passed = sum(1 for result in self.test_results if result['success'])
+        failed = sum(1 for result in self.test_results if not result['success'])
+        total = len(self.test_results)
+        
+        print(f"✅ Passed: {passed}")
+        print(f"❌ Failed: {failed}")
+        print(f"📊 Total: {total}")
+        print(f"📈 Success Rate: {(passed/total*100):.1f}%" if total > 0 else "No tests run")
+        
+        if failed > 0:
+            print(f"\n❌ FAILED TESTS:")
+            for result in self.test_results:
+                if not result['success']:
+                    print(f"   • {result['test']}: {result['message']}")
+        
+        return self.test_results
+
     def run_all_tests(self):
         """Run all backend API tests including multi-branch system and WhatsApp integration"""
         print(f"🚀 Starting Backend API Tests for GB Advocacia & N. Comin")
