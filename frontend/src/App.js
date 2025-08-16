@@ -1597,7 +1597,7 @@ function App() {
     const generateProcuration = (client) => {
       const template = `PROCURAÇÃO
 
-OUTORGANTE: ${client.name}, ${client.client_type === 'individual' ? 'brasileiro' : 'empresa brasileira'}, ${client.civil_status !== 'N/A' ? client.civil_status : ''}, ${client.profession}, portador do CPF ${client.cpf}, residente e domiciliado à ${client.address.street}, ${client.address.number}, ${client.address.district}, ${client.address.city}-${client.address.state}${client.address.complement ? ', ' + client.address.complement : ''}.
+OUTORGANTE: ${client.name}, ${client.client_type === 'individual' ? 'brasileiro' : 'empresa brasileira'}, ${client.civil_status !== 'N/A' ? client.civil_status : ''}, ${client.profession}, portador do CPF ${client.cpf}, residente e domiciliado à ${client.street}, ${client.number}, ${client.district}, ${client.city}-${client.state}${client.complement ? ', ' + client.complement : ''}.
 
 OUTORGADO: GB ADVOCACIA & N. COMIN, sociedade de advogados, inscrita no CNPJ sob o nº ________________, com sede à ________________, representada neste ato por seus sócios.
 
