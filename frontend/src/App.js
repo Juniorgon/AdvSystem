@@ -628,6 +628,10 @@ function App() {
                 { key: 'processes', label: 'Processos', icon: '⚖️' },
                 { key: 'financial', label: 'Financeiro', icon: '💰' },
                 { key: 'contracts', label: 'Contratos', icon: '📋' },
+                ...(user?.role === 'lawyer' ? [
+                  { key: 'tasks', label: '📋 Tarefas', icon: '' },
+                  { key: 'agenda', label: '📅 Agenda', icon: '' }
+                ] : []),
                 { key: 'lawyers', label: 'Advogados', icon: '👨‍💼' }
               ].map(item => (
                 <button
