@@ -1085,7 +1085,21 @@ async def delete_process(process_id: str, db: Session = Depends(get_db)):
 
 # Financial endpoints
 @api_router.post("/financial", response_model=FinancialTransaction)
-async def create_financial_transaction(transaction: FinancialTransactionCreate, db: Session = Depends(get_db)):
+async def create_financial_transaction(transaction: FinancialTransactionCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Check financial access permission
+    if not check_financial_access(current_user, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso negado: Você não tem permissão para acessar dados financeiros"
+        )
+    
+    # Validate branch access
+    if not validate_branch_access(current_user, transaction.branch_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso negado: Você não tem permissão para acessar dados desta filial"
+        )
+    
     transaction_db = DBFinancialTransaction(**transaction.dict())
     db.add(transaction_db)
     db.commit()
@@ -1095,11 +1109,11 @@ async def create_financial_transaction(transaction: FinancialTransactionCreate, 
 
 @api_router.get("/financial", response_model=List[FinancialTransaction])
 async def get_financial_transactions(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Check financial access
+    # Check financial access permission
     if not check_financial_access(current_user, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Acesso negado aos dados financeiros"
+            detail="Acesso negado: Você não tem permissão para acessar dados financeiros. Entre em contato com o administrador para solicitar acesso."
         )
     
     accessible_branches = get_accessible_branches(current_user, db)
@@ -1119,15 +1133,23 @@ async def update_financial_transaction(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    # Check financial access permission
     if not check_financial_access(current_user, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Acesso negado aos dados financeiros"
+            detail="Acesso negado: Você não tem permissão para acessar dados financeiros"
         )
     
     transaction_db = db.query(DBFinancialTransaction).filter(DBFinancialTransaction.id == transaction_id).first()
     if not transaction_db:
         raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    # Validate branch access
+    if not validate_branch_access(current_user, transaction_db.branch_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso negado: Você não tem permissão para acessar dados desta filial"
+        )
     
     update_data = transaction_update.dict(exclude_unset=True)
     
@@ -1141,10 +1163,24 @@ async def update_financial_transaction(
     return FinancialTransaction.from_orm(transaction_db)
 
 @api_router.delete("/financial/{transaction_id}")
-async def delete_financial_transaction(transaction_id: str, db: Session = Depends(get_db)):
+async def delete_financial_transaction(transaction_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Check financial access permission
+    if not check_financial_access(current_user, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso negado: Você não tem permissão para acessar dados financeiros"
+        )
+    
     transaction = db.query(DBFinancialTransaction).filter(DBFinancialTransaction.id == transaction_id).first()
     if not transaction:
         raise HTTPException(status_code=404, detail="Transação financeira não encontrada")
+    
+    # Validate branch access
+    if not validate_branch_access(current_user, transaction.branch_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso negado: Você não tem permissão para acessar dados desta filial"
+        )
     
     if transaction.status == TransactionStatus.pago:
         raise HTTPException(
