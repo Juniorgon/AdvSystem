@@ -1371,17 +1371,35 @@ function App() {
       civil_status: '',
       profession: '',
       cpf: '',
-      address: {
+      street: '',
+      number: '',
+      city: '',
+      district: '',
+      state: '',
+      complement: '',
+      phone: '',
+      client_type: 'individual',
+      branch_id: ''
+    });
+
+    const resetForm = () => {
+      setFormData({
+        name: '',
+        nationality: '',
+        civil_status: '',
+        profession: '',
+        cpf: '',
         street: '',
         number: '',
         city: '',
         district: '',
         state: '',
-        complement: ''
-      },
-      phone: '',
-      client_type: 'individual'
-    });
+        complement: '',
+        phone: '',
+        client_type: 'individual',
+        branch_id: ''
+      });
+    };
 
     const handleSubmit = async (e) => {
       e.preventDefault();
