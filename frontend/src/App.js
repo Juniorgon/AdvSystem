@@ -5628,6 +5628,420 @@ Testemunhas:
     );
   };
 
+  // Google Drive Documents Component
+  const GoogleDriveDocuments = () => {
+    const [driveStatus, setDriveStatus] = useState({ configured: false, message: '' });
+    const [authUrl, setAuthUrl] = useState('');
+    const [authCode, setAuthCode] = useState('');
+    const [isConfiguring, setIsConfiguring] = useState(false);
+    const [selectedClient, setSelectedClient] = useState('');
+    const [selectedProcess, setSelectedProcess] = useState('');
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [clientDocuments, setClientDocuments] = useState([]);
+    const [showClientDocs, setShowClientDocs] = useState(false);
+    const [generationHistory, setGenerationHistory] = useState([]);
+
+    // Check Google Drive status on component mount
+    useEffect(() => {
+      checkDriveStatus();
+    }, []);
+
+    const checkDriveStatus = async () => {
+      try {
+        const response = await axios.get(`${API}/google-drive/status`);
+        setDriveStatus(response.data);
+      } catch (error) {
+        console.error('Error checking Google Drive status:', error);
+        setDriveStatus({ 
+          configured: false, 
+          message: 'Error checking Google Drive status' 
+        });
+      }
+    };
+
+    const getAuthUrl = async () => {
+      try {
+        setIsConfiguring(true);
+        const response = await axios.get(`${API}/google-drive/auth-url`);
+        setAuthUrl(response.data.authorization_url);
+        
+        // Open authorization URL in new window
+        window.open(response.data.authorization_url, '_blank');
+        
+        toast.info('🔗 Complete a autorização no Google e cole o código abaixo');
+      } catch (error) {
+        handleApiError(error, 'Erro ao obter URL de autorização do Google Drive');
+      } finally {
+        setIsConfiguring(false);
+      }
+    };
+
+    const completeAuth = async () => {
+      if (!authCode.trim()) {
+        toast.error('Por favor, insira o código de autorização');
+        return;
+      }
+
+      try {
+        setIsConfiguring(true);
+        await axios.post(`${API}/google-drive/authorize`, {
+          authorization_code: authCode
+        });
+        
+        toast.success('✅ Google Drive configurado com sucesso!');
+        setAuthCode('');
+        setAuthUrl('');
+        await checkDriveStatus();
+      } catch (error) {
+        handleApiError(error, 'Erro ao configurar Google Drive');
+      } finally {
+        setIsConfiguring(false);
+      }
+    };
+
+    const generateProcuracao = async () => {
+      if (!selectedClient) {
+        toast.error('Selecione um cliente');
+        return;
+      }
+
+      try {
+        setIsGenerating(true);
+        
+        const requestData = {
+          client_id: selectedClient,
+          process_id: selectedProcess || undefined
+        };
+        
+        const response = await axios.post(`${API}/google-drive/generate-procuracao`, requestData);
+        
+        const newGeneration = {
+          id: Date.now(),
+          client_name: response.data.client_name,
+          process_number: response.data.process_number,
+          drive_link: response.data.drive_link,
+          created_at: new Date().toISOString()
+        };
+        
+        setGenerationHistory(prev => [newGeneration, ...prev]);
+        
+        toast.success('📄 Procuração gerada e salva no Google Drive!');
+        
+        // Reset form
+        setSelectedClient('');
+        setSelectedProcess('');
+        
+      } catch (error) {
+        if (error.response?.status === 500 && error.response?.data?.detail?.includes('Google Drive')) {
+          toast.error('❌ Erro: Google Drive não configurado ou sem acesso');
+        } else {
+          handleApiError(error, 'Erro ao gerar procuração');
+        }
+      } finally {
+        setIsGenerating(false);
+      }
+    };
+
+    const viewClientDocuments = async (clientId) => {
+      try {
+        const response = await axios.get(`${API}/google-drive/client-documents/${clientId}`);
+        setClientDocuments(response.data);
+        setShowClientDocs(true);
+      } catch (error) {
+        handleApiError(error, 'Erro ao carregar documentos do cliente');
+      }
+    };
+
+    // Check if user is admin
+    if (user?.role !== 'admin') {
+      return (
+        <div className="p-6">
+          <div className="bg-red-900 bg-opacity-30 border border-red-600 rounded-lg p-6 text-center">
+            <h2 className="text-2xl font-bold text-red-400 mb-4">🚫 Acesso Restrito</h2>
+            <p className="text-red-200">
+              Apenas administradores podem acessar os documentos do Google Drive.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-white">📄 Gestão de Documentos - Google Drive</h1>
+            <p className="text-gray-300">Gere procurações automaticamente e gerencie documentos</p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className={`px-3 py-1 rounded-full text-sm ${
+              driveStatus.configured 
+                ? 'bg-green-900 text-green-300 border border-green-600' 
+                : 'bg-red-900 text-red-300 border border-red-600'
+            }`}>
+              {driveStatus.configured ? '✅ Conectado' : '❌ Desconectado'}
+            </div>
+          </div>
+        </div>
+
+        {!driveStatus.configured ? (
+          /* Google Drive Configuration */
+          <div className="bg-gray-800 rounded-lg p-6 mb-6">
+            <h2 className="text-xl font-bold text-white mb-4">🔧 Configurar Google Drive</h2>
+            <p className="text-gray-300 mb-4">
+              Para usar a geração automática de procurações, você precisa configurar a integração com o Google Drive.
+            </p>
+            
+            <div className="bg-yellow-900 bg-opacity-30 border border-yellow-600 rounded-lg p-4 mb-4">
+              <h4 className="text-yellow-400 font-semibold mb-2">📋 Instruções:</h4>
+              <ol className="text-yellow-200 text-sm space-y-1">
+                <li>1. Clique em "Configurar Google Drive"</li>
+                <li>2. Faça login na sua conta Google</li>
+                <li>3. Autorize o acesso ao Google Drive</li>
+                <li>4. Cole o código de autorização aqui</li>
+                <li>5. Complete a configuração</li>
+              </ol>
+            </div>
+
+            {!authUrl ? (
+              <button
+                onClick={getAuthUrl}
+                disabled={isConfiguring}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors flex items-center space-x-2"
+              >
+                {isConfiguring ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Configurando...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🔗</span>
+                    <span>Configurar Google Drive</span>
+                  </>
+                )}
+              </button>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">
+                    Código de Autorização do Google:
+                  </label>
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      value={authCode}
+                      onChange={(e) => setAuthCode(e.target.value)}
+                      className="flex-1 p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Cole aqui o código obtido do Google..."
+                    />
+                    <button
+                      onClick={completeAuth}
+                      disabled={isConfiguring || !authCode.trim()}
+                      className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
+                    >
+                      {isConfiguring ? 'Configurando...' : 'Finalizar'}
+                    </button>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => { setAuthUrl(''); setAuthCode(''); }}
+                  className="text-gray-400 hover:text-gray-300 text-sm"
+                >
+                  Cancelar configuração
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Document Generation Interface */
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Generation Form */}
+            <div className="lg:col-span-1">
+              <div className="bg-gray-800 rounded-lg p-6">
+                <h2 className="text-xl font-bold text-white mb-4">📝 Gerar Procuração</h2>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-1">Cliente *</label>
+                    <select
+                      value={selectedClient}
+                      onChange={(e) => setSelectedClient(e.target.value)}
+                      className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      required
+                    >
+                      <option value="">Selecione um cliente...</option>
+                      {clients.map(client => (
+                        <option key={client.id} value={client.id}>
+                          {client.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-1">Processo (opcional)</label>
+                    <select
+                      value={selectedProcess}
+                      onChange={(e) => setSelectedProcess(e.target.value)}
+                      className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    >
+                      <option value="">Procuração geral...</option>
+                      {processes
+                        .filter(process => !selectedClient || process.client_id === selectedClient)
+                        .map(process => (
+                        <option key={process.id} value={process.id}>
+                          {process.process_number} - {process.type}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="text-xs text-gray-400 mt-1">
+                      Se não selecionado, será gerada procuração geral
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={generateProcuracao}
+                    disabled={isGenerating || !selectedClient}
+                    className="w-full bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Gerando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>📄</span>
+                        <span>Gerar Procuração</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Client Documents */}
+              <div className="bg-gray-800 rounded-lg p-6 mt-6">
+                <h3 className="text-lg font-semibold text-white mb-4">📂 Documentos do Cliente</h3>
+                <div>
+                  <select
+                    onChange={(e) => e.target.value && viewClientDocuments(e.target.value)}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="">Selecionar cliente para ver documentos...</option>
+                    {clients.map(client => (
+                      <option key={client.id} value={client.id}>
+                        {client.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Generation History and Documents */}
+            <div className="lg:col-span-2">
+              <div className="bg-gray-800 rounded-lg p-6">
+                <h2 className="text-xl font-bold text-white mb-4">📋 Histórico de Gerações</h2>
+                
+                {generationHistory.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400">
+                    <div className="text-4xl mb-4">📄</div>
+                    <p>Nenhum documento gerado ainda</p>
+                    <p className="text-sm mt-2">Use o formulário ao lado para gerar a primeira procuração</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {generationHistory.map(item => (
+                      <div key={item.id} className="bg-gray-700 rounded-lg p-4 border-l-4 border-green-500">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-semibold text-white">Procuração - {item.client_name}</h4>
+                            {item.process_number && (
+                              <p className="text-sm text-gray-300">
+                                Processo: {item.process_number}
+                              </p>
+                            )}
+                            <p className="text-xs text-gray-400 mt-1">
+                              Gerado em: {new Date(item.created_at).toLocaleString('pt-BR')}
+                            </p>
+                          </div>
+                          
+                          <div className="flex space-x-2">
+                            <a
+                              href={item.drive_link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors"
+                            >
+                              📄 Visualizar
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Client Documents Modal */}
+        {showClientDocs && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-white">📂 Documentos do Cliente</h2>
+                <button
+                  onClick={() => setShowClientDocs(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              {clientDocuments.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <p>Nenhum documento encontrado para este cliente</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {clientDocuments.map(doc => (
+                    <div key={doc.id} className="bg-gray-700 rounded-lg p-4">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <div className="text-2xl">
+                          {doc.mime_type.includes('document') ? '📄' : 
+                           doc.mime_type.includes('spreadsheet') ? '📊' : 
+                           doc.mime_type.includes('pdf') ? '📕' : '📋'}
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-white truncate">{doc.name}</h4>
+                          <p className="text-xs text-gray-400">
+                            {new Date(doc.created_time).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                      </div>
+                      <a
+                        href={doc.web_view_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors flex items-center justify-center space-x-2"
+                      >
+                        <span>🔗</span>
+                        <span>Abrir no Google Drive</span>
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
   const renderCurrentPage = () => {
     switch(currentPage) {
       case 'dashboard':
