@@ -19,7 +19,7 @@ from sqlalchemy import func, extract, and_, or_
 
 # Import database models and connection
 from database import (
-    get_db, create_tables, drop_tables,
+    get_db, create_tables, drop_tables, SessionLocal,
     User as DBUser, Client as DBClient, Process as DBProcess, 
     FinancialTransaction as DBFinancialTransaction, Contract as DBContract,
     Lawyer as DBLawyer, Branch as DBBranch, Task as DBTask,
