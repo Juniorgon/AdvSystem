@@ -1414,40 +1414,80 @@ function App() {
           </div>
         </div>
 
-        {/* Cash Flow Summary - Enhanced */}
-        <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
-          <h3 className="text-lg font-semibold text-white mb-4">Resumo do Fluxo de Caixa</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
-                <span className="text-gray-300 font-medium">Saldo Atual:</span>
-                <span className={`text-2xl font-bold ${
-                  (dashboardStats.total_revenue - dashboardStats.total_expenses) >= 0 
-                    ? 'text-green-400' 
-                    : 'text-red-400'
-                }`}>
-                  R$ {((dashboardStats.total_revenue || 0) - (dashboardStats.total_expenses || 0))
-                    .toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-                </span>
+        {/* Cash Flow Summary - Enhanced with Permission Control */}
+        {userPermissions?.canAccessFinancialData ? (
+          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
+            <h3 className="text-lg font-semibold text-white mb-4">Resumo do Fluxo de Caixa</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
+                  <span className="text-gray-300 font-medium">Saldo Atual:</span>
+                  <span className={`text-2xl font-bold ${
+                    (dashboardStats.total_revenue - dashboardStats.total_expenses) >= 0 
+                      ? 'text-green-400' 
+                      : 'text-red-400'
+                  }`}>
+                    R$ {((dashboardStats.total_revenue || 0) - (dashboardStats.total_expenses || 0))
+                      .toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
+                  <span className="text-gray-300 font-medium">Saldo Mensal:</span>
+                  <span className={`text-2xl font-bold ${
+                    (dashboardStats.monthly_revenue - dashboardStats.monthly_expenses) >= 0 
+                      ? 'text-green-400' 
+                      : 'text-red-400'
+                  }`}>
+                    R$ {((dashboardStats.monthly_revenue || 0) - (dashboardStats.monthly_expenses || 0))
+                      .toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
-                <span className="text-gray-300 font-medium">Saldo Mensal:</span>
-                <span className={`text-2xl font-bold ${
-                  (dashboardStats.monthly_revenue - dashboardStats.monthly_expenses) >= 0 
-                    ? 'text-green-400' 
-                    : 'text-red-400'
-                }`}>
-                  R$ {((dashboardStats.monthly_revenue || 0) - (dashboardStats.monthly_expenses || 0))
-                    .toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-                </span>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
+                  <span className="text-gray-300 font-medium">Total de Contratos:</span>
+                  <span className="text-xl font-bold text-blue-400">{contracts.length}</span>
+                </div>
+                <div className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
+                  <span className="text-gray-300 font-medium">Clientes Ativos:</span>
+                  <span className="text-xl font-bold text-purple-400">{clients.length}</span>
+                </div>
               </div>
             </div>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
-                <span className="text-gray-300 font-medium">Total de Contratos:</span>
-                <span className="text-xl font-bold text-blue-400">{contracts.length}</span>
+          </div>
+        ) : (
+          <div className="bg-red-900 bg-opacity-30 border border-red-600 p-6 rounded-lg shadow-lg">
+            <h3 className="text-lg font-semibold text-red-400 mb-4">Resumo do Fluxo de Caixa</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-4 bg-red-800 bg-opacity-50 rounded-lg">
+                  <span className="text-red-300 font-medium">Saldo Atual:</span>
+                  <span className="text-red-400 font-bold">🚫 Restrito</span>
+                </div>
+                <div className="flex justify-between items-center p-4 bg-red-800 bg-opacity-50 rounded-lg">
+                  <span className="text-red-300 font-medium">Saldo Mensal:</span>
+                  <span className="text-red-400 font-bold">🚫 Restrito</span>
+                </div>
               </div>
-              <div className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
+                  <span className="text-gray-300 font-medium">Total de Contratos:</span>
+                  <span className="text-xl font-bold text-blue-400">{contracts.length}</span>
+                </div>
+                <div className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
+                  <span className="text-gray-300 font-medium">Clientes Ativos:</span>
+                  <span className="text-xl font-bold text-purple-400">{clients.length}</span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 p-4 bg-yellow-900 bg-opacity-50 border border-yellow-600 rounded-lg">
+              <p className="text-yellow-300 text-sm text-center">
+                💡 <strong>Informação:</strong> Dados financeiros estão ocultos conforme suas permissões de usuário. 
+                Dados não financeiros (contratos e clientes) permanecem visíveis.
+              </p>
+            </div>
+          </div>
+        )}
                 <span className="text-gray-300 font-medium">Margem de Lucro:</span>
                 <span className={`text-xl font-bold ${
                   (dashboardStats.total_revenue || 0) > 0
