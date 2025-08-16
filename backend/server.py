@@ -513,7 +513,7 @@ def check_financial_access(current_user: User, db: Session) -> bool:
     if current_user.role == UserRole.lawyer:
         lawyer = db.query(DBLawyer).filter(DBLawyer.email == current_user.email).first()
         if lawyer:
-            return lawyer.access_financial_data
+            return lawyer.access_financial_data == True
     
     return False
 
@@ -527,12 +527,65 @@ def get_accessible_branches(current_user: User, db: Session) -> List[str]:
         lawyer = db.query(DBLawyer).filter(DBLawyer.email == current_user.email).first()
         if lawyer and lawyer.allowed_branch_ids:
             try:
-                return json.loads(lawyer.allowed_branch_ids)
+                allowed_branches = json.loads(lawyer.allowed_branch_ids)
+                # If lawyer has specific allowed branches, use those
+                if allowed_branches:
+                    return allowed_branches
             except:
                 pass
+        
+        # If lawyer doesn't have specific allowed branches, default to their own branch
+        if lawyer:
+            return [lawyer.branch_id]
     
-    # Default: only own branch
+    # Default: only own branch for branch admins
     return [current_user.branch_id] if current_user.branch_id else []
+
+def validate_branch_access(current_user: User, target_branch_id: str, db: Session) -> bool:
+    """Validate if user has access to specific branch"""
+    accessible_branches = get_accessible_branches(current_user, db)
+    
+    # Empty list means access to all branches (super admin)
+    if not accessible_branches:
+        return True
+    
+    return target_branch_id in accessible_branches
+
+def get_lawyer_permissions(current_user: User, db: Session) -> Dict[str, Any]:
+    """Get detailed permissions for a lawyer"""
+    permissions = {
+        'can_access_financial_data': False,
+        'accessible_branches': [],
+        'can_create_tasks': False,
+        'can_edit_tasks': False,
+        'can_manage_users': False,
+        'can_manage_lawyers': False,
+        'can_access_google_drive': False,
+        'can_access_whatsapp': False,
+        'can_access_security_reports': False
+    }
+    
+    if current_user.role == UserRole.admin:
+        # Admins have all permissions
+        return {
+            'can_access_financial_data': True,
+            'accessible_branches': get_accessible_branches(current_user, db),
+            'can_create_tasks': True,
+            'can_edit_tasks': True,
+            'can_manage_users': True,
+            'can_manage_lawyers': True,
+            'can_access_google_drive': True,
+            'can_access_whatsapp': True,
+            'can_access_security_reports': True
+        }
+    
+    if current_user.role == UserRole.lawyer:
+        lawyer = db.query(DBLawyer).filter(DBLawyer.email == current_user.email).first()
+        if lawyer:
+            permissions['can_access_financial_data'] = lawyer.access_financial_data == True
+            permissions['accessible_branches'] = get_accessible_branches(current_user, db)
+    
+    return permissions
 
 # Authentication endpoints
 @api_router.post("/auth/register", response_model=User)
