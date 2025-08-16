@@ -565,7 +565,29 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     return User.from_orm(user_db)
 
 @api_router.post("/auth/login", response_model=Token)
-async def login_user(user_credentials: UserLogin, db: Session = Depends(get_db)):
+async def login_user(user_credentials: UserLogin, request: Request, db: Session = Depends(get_db)):
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("User-Agent", "Unknown")
+    
+    # Validate input for security threats
+    validate_input_security(user_credentials.username_or_email)
+    validate_input_security(user_credentials.password)
+    
+    # Check if account is locked
+    if security_manager.login_tracker.is_account_locked(user_credentials.username_or_email):
+        security_manager.log_security_event(SecurityEvent(
+            event_type="LOGIN_ATTEMPT_LOCKED_ACCOUNT",
+            ip_address=client_ip,
+            user_agent=user_agent,
+            timestamp=datetime.utcnow(),
+            details={"username": user_credentials.username_or_email},
+            severity="WARNING"
+        ))
+        raise HTTPException(
+            status_code=status.HTTP_423_LOCKED,
+            detail="Account temporarily locked due to multiple failed login attempts"
+        )
+    
     # Try to find user by username or email
     user_db = db.query(DBUser).filter(
         or_(DBUser.username == user_credentials.username_or_email, 
@@ -578,6 +600,15 @@ async def login_user(user_credentials: UserLogin, db: Session = Depends(get_db))
         if lawyer_db:
             # Verify password is the OAB number
             if user_credentials.password == lawyer_db.oab_number:
+                security_manager.login_tracker.record_successful_login(user_credentials.username_or_email)
+                security_manager.log_security_event(SecurityEvent(
+                    event_type="LOGIN_SUCCESS_LAWYER",
+                    ip_address=client_ip,
+                    user_agent=user_agent,
+                    timestamp=datetime.utcnow(),
+                    details={"lawyer_email": lawyer_db.email, "lawyer_name": lawyer_db.full_name}
+                ))
+                
                 user_dict = {
                     "id": lawyer_db.id,
                     "username": lawyer_db.email,
@@ -597,25 +628,73 @@ async def login_user(user_credentials: UserLogin, db: Session = Depends(get_db))
                 user = User(**user_dict)
                 return Token(access_token=access_token, token_type="bearer", user=user)
             else:
+                # Record failed attempt
+                security_manager.login_tracker.record_failed_attempt(user_credentials.username_or_email, client_ip)
+                security_manager.log_security_event(SecurityEvent(
+                    event_type="LOGIN_FAILURE_WRONG_PASSWORD",
+                    ip_address=client_ip,
+                    user_agent=user_agent,
+                    timestamp=datetime.utcnow(),
+                    details={"username": user_credentials.username_or_email, "reason": "wrong_oab_password"},
+                    severity="WARNING"
+                ))
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Para advogados, use seu email e os números da sua OAB como senha",
                 )
     
     if not user_db:
+        # Record failed attempt for non-existent user
+        security_manager.login_tracker.record_failed_attempt(user_credentials.username_or_email, client_ip)
+        security_manager.log_security_event(SecurityEvent(
+            event_type="LOGIN_FAILURE_USER_NOT_FOUND",
+            ip_address=client_ip,
+            user_agent=user_agent,
+            timestamp=datetime.utcnow(),
+            details={"username": user_credentials.username_or_email},
+            severity="WARNING"
+        ))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Usuário não encontrado",
         )
     
-    if not verify_password(user_credentials.password, user_db.hashed_password):
+    if not verify_password_secure(user_credentials.password, user_db.hashed_password):
+        # Record failed attempt
+        security_manager.login_tracker.record_failed_attempt(user_credentials.username_or_email, client_ip)
+        security_manager.log_security_event(SecurityEvent(
+            event_type="LOGIN_FAILURE_WRONG_PASSWORD",
+            ip_address=client_ip,
+            user_agent=user_agent,
+            timestamp=datetime.utcnow(),
+            details={"username": user_db.username, "reason": "wrong_password"},
+            severity="WARNING"
+        ))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Senha incorreta",
         )
     
     if not user_db.is_active:
+        security_manager.log_security_event(SecurityEvent(
+            event_type="LOGIN_FAILURE_INACTIVE_USER",
+            ip_address=client_ip,
+            user_agent=user_agent,
+            timestamp=datetime.utcnow(),
+            details={"username": user_db.username},
+            severity="WARNING"
+        ))
         raise HTTPException(status_code=400, detail="Usuário inativo")
+    
+    # Successful login
+    security_manager.login_tracker.record_successful_login(user_credentials.username_or_email)
+    security_manager.log_security_event(SecurityEvent(
+        event_type="LOGIN_SUCCESS",
+        ip_address=client_ip,
+        user_agent=user_agent,
+        timestamp=datetime.utcnow(),
+        details={"username": user_db.username, "role": user_db.role.value}
+    ))
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
