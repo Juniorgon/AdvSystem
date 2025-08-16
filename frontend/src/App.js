@@ -666,23 +666,27 @@ function App() {
                 { key: 'dashboard', label: 'Dashboard', icon: '📊' },
                 { key: 'clients', label: 'Clientes', icon: '👥' },
                 { key: 'processes', label: 'Processos', icon: '⚖️' },
-                // Only show financial tab if user has permission
-                ...(userPermissions?.canAccessFinancialData ? [
+                // Always show financial tab for admins and lawyers with permission
+                ...(user?.role === 'admin' || userPermissions?.canAccessFinancialData ? [
                   { key: 'financial', label: '💰 Financeiro', icon: '' }
                 ] : []),
                 { key: 'contracts', label: 'Contratos', icon: '📋' },
+                
+                // Show tasks and agenda for lawyers
                 ...(user?.role === 'lawyer' ? [
                   { key: 'tasks', label: '📋 Tarefas', icon: '' },
                   { key: 'agenda', label: '📅 Agenda', icon: '' }
                 ] : []),
+                
+                // Show tasks for admins too
+                ...(user?.role === 'admin' ? [
+                  { key: 'tasks', label: '📋 Tarefas', icon: '' }
+                ] : []),
+                
                 // Only show admin-only tabs for admins
                 ...(user?.role === 'admin' ? [
-                  ...(userPermissions?.canAccessGoogleDrive ? [
-                    { key: 'documents', label: '📄 Documentos', icon: '' }
-                  ] : []),
-                  ...(userPermissions?.canAccessWhatsApp ? [
-                    { key: 'notifications', label: '📱 WhatsApp', icon: '' }
-                  ] : [])
+                  { key: 'documents', label: '📄 Documentos', icon: '' },
+                  { key: 'notifications', label: '📱 WhatsApp', icon: '' }
                 ] : []),
                 { key: 'lawyers', label: 'Advogados', icon: '👨‍💼' }
               ].map(item => (
