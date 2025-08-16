@@ -1531,11 +1531,11 @@ class BackendTester:
                 self.log_test("WhatsApp Check Payments Endpoint Fix", True, f"Bulk check endpoint accessible")
                 
                 # Verify response structure
-                expected_fields = ['checked_transactions', 'reminders_sent', 'simulated']
+                expected_fields = ['success', 'message', 'total_overdue', 'reminders_sent', 'failed']
                 if all(field in result for field in expected_fields):
-                    self.log_test("WhatsApp Bulk Check Response", True, f"Checked {result.get('checked_transactions', 0)} transactions")
+                    self.log_test("WhatsApp Bulk Check Response", True, f"Checked {result.get('total_overdue', 0)} overdue transactions, sent {result.get('reminders_sent', 0)} reminders")
                 else:
-                    self.log_test("WhatsApp Bulk Check Response", False, "Missing expected response fields")
+                    self.log_test("WhatsApp Bulk Check Response", False, f"Missing expected response fields. Got: {list(result.keys())}")
                     
             elif response.status_code == 404:
                 self.log_test("WhatsApp Check Payments Endpoint Fix", False, "Still returning 404 - endpoint not found")
