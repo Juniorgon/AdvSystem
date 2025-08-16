@@ -396,7 +396,8 @@ class BackendTester:
         
         # Test 4: Get All Financial Transactions
         try:
-            response = self.session.get(f"{API_BASE_URL}/financial")
+            headers = {'Authorization': f'Bearer {self.auth_tokens.get("super_admin")}'} if 'super_admin' in self.auth_tokens else {}
+            response = self.session.get(f"{API_BASE_URL}/financial", headers=headers)
             if response.status_code == 200:
                 transactions = response.json()
                 self.log_test("Get All Financial Transactions", True, f"Retrieved {len(transactions)} transactions")
