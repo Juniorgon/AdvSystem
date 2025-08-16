@@ -633,6 +633,7 @@ function App() {
                   { key: 'agenda', label: '📅 Agenda', icon: '' }
                 ] : []),
                 ...(user?.role === 'admin' ? [
+                  { key: 'documents', label: '📄 Documentos', icon: '' },
                   { key: 'notifications', label: '📱 WhatsApp', icon: '' }
                 ] : []),
                 { key: 'lawyers', label: 'Advogados', icon: '👨‍💼' }
