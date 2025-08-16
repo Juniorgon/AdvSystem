@@ -1,5 +1,6 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Query, Depends, status
+from fastapi import FastAPI, APIRouter, HTTPException, Query, Depends, status, Request, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 import os
@@ -29,6 +30,13 @@ from database import (
 
 # Import Google Drive service
 from google_drive_service import google_drive_service
+
+# Import Enhanced Security Module
+from security import (
+    security_manager, SecurityHeaders, PasswordValidator, 
+    validate_input_security, hash_password, verify_password,
+    SecurityEvent
+)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
