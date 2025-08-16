@@ -27,6 +27,9 @@ from database import (
     UserRole, ClientType, ProcessRole, TransactionType, TransactionStatus
 )
 
+# Import Google Drive service
+from google_drive_service import google_drive_service
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
