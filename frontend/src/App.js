@@ -139,6 +139,7 @@ function App() {
       fetchFinancialTransactions();
       fetchContracts();
       fetchLawyers();
+      fetchTasks();
     }
   };
 
