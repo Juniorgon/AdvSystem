@@ -1413,9 +1413,24 @@ function App() {
           return;
         }
 
+        // Prepare client data with address object for API
         const clientData = {
-          ...formData,
-          branch_id: branchId
+          name: formData.name,
+          nationality: formData.nationality,
+          civil_status: formData.civil_status,
+          profession: formData.profession,
+          cpf: formData.cpf,
+          phone: formData.phone,
+          client_type: formData.client_type,
+          branch_id: branchId,
+          address: {
+            street: formData.street,
+            number: formData.number,
+            city: formData.city,
+            district: formData.district,
+            state: formData.state,
+            complement: formData.complement
+          }
         };
         
         if (editingClient) {
