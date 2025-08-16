@@ -1431,22 +1431,43 @@ async def get_google_drive_status(current_user: User = Depends(get_current_user)
 
 @api_router.get("/google-drive/auth-url")
 async def get_google_drive_auth_url(current_user: User = Depends(get_current_user)):
-    """Get Google Drive OAuth authorization URL"""
+    """Get Google Drive authorization URL for OAuth setup"""
+    
+    # Only admins can configure Google Drive
     if current_user.role != UserRole.admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only administrators can configure Google Drive"
         )
     
-    auth_url = google_drive_service.get_authorization_url()
-    
-    if not auth_url:
+    # Check if credentials file exists
+    credentials_file = '/app/backend/google_credentials.json'
+    if not os.path.exists(credentials_file):
         raise HTTPException(
             status_code=400,
-            detail="Failed to generate authorization URL. Check Google credentials file."
+            detail="Google credentials file not found. Please add google_credentials.json to backend directory."
         )
     
-    return {"authorization_url": auth_url}
+    try:
+        auth_url = google_drive_service.get_authorization_url()
+        
+        if not auth_url:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to generate authorization URL. Please check Google credentials configuration."
+            )
+        
+        return {
+            "authorization_url": auth_url,
+            "message": "Visit this URL to authorize Google Drive access"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error generating Google Drive auth URL: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generating authorization URL: {str(e)}"
+        )
 
 @api_router.post("/google-drive/authorize")
 async def authorize_google_drive(
