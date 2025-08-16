@@ -1351,13 +1351,28 @@ function App() {
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* Revenue vs Expenses Chart */}
-          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg card-hover animate-slideInLeft">
-            <h3 className="text-lg font-semibold text-white mb-4">Receitas vs Despesas</h3>
-            <div className="h-64">
-              <Line data={revenueExpenseData} options={chartOptions} />
+          {/* Revenue vs Expenses Chart - Only show if has financial access */}
+          {userPermissions?.canAccessFinancialData ? (
+            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg card-hover animate-slideInLeft">
+              <h3 className="text-lg font-semibold text-white mb-4">Receitas vs Despesas</h3>
+              <div className="h-64">
+                <Line data={revenueExpenseData} options={chartOptions} />
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-red-900 bg-opacity-30 border border-red-600 p-6 rounded-lg shadow-lg animate-slideInLeft">
+              <h3 className="text-lg font-semibold text-red-400 mb-4">Receitas vs Despesas</h3>
+              <div className="h-64 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="text-6xl mb-4">🔒</div>
+                  <p className="text-red-300 font-semibold">Dados Financeiros Restritos</p>
+                  <p className="text-red-400 text-sm mt-2">
+                    Entre em contato com o administrador<br />para solicitar acesso
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Processes Status Chart */}
           <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg card-hover animate-slideInRight">
@@ -1367,13 +1382,28 @@ function App() {
             </div>
           </div>
 
-          {/* Financial Status Chart */}
-          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg card-hover animate-slideInLeft" style={{animationDelay: '0.2s'}}>
-            <h3 className="text-lg font-semibold text-white mb-4">Status Financeiro</h3>
-            <div className="h-64">
-              <Bar data={financialData} options={chartOptions} />
+          {/* Financial Status Chart - Only show if has financial access */}
+          {userPermissions?.canAccessFinancialData ? (
+            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg card-hover animate-slideInLeft" style={{animationDelay: '0.2s'}}>
+              <h3 className="text-lg font-semibold text-white mb-4">Status Financeiro</h3>
+              <div className="h-64">
+                <Bar data={financialData} options={chartOptions} />
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-red-900 bg-opacity-30 border border-red-600 p-6 rounded-lg shadow-lg animate-slideInLeft" style={{animationDelay: '0.2s'}}>
+              <h3 className="text-lg font-semibold text-red-400 mb-4">Status Financeiro</h3>
+              <div className="h-64 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="text-6xl mb-4">🔒</div>
+                  <p className="text-red-300 font-semibold">Dados Financeiros Restritos</p>
+                  <p className="text-red-400 text-sm mt-2">
+                    Acesso limitado pelo seu<br />perfil de usuário
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Client Types Chart */}
           <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg card-hover animate-slideInRight" style={{animationDelay: '0.2s'}}>
