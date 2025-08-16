@@ -2222,7 +2222,8 @@ Testemunhas:
       status: 'Em Andamento',
       value: '',
       description: '',
-      role: 'creditor'
+      role: 'creditor',
+      responsible_lawyer_id: ''
     });
 
     const handleSubmit = async (e) => {
