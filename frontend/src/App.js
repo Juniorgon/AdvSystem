@@ -580,13 +580,16 @@ function App() {
     try {
       const response = await axios.get(`${API}/financial`);
       setFinancialTransactions(response.data);
-      setUserPermissions(prev => ({ ...prev, canAccessFinancialData: true }));
+      // Update permissions if successful
+      if (userPermissions && !userPermissions.canAccessFinancialData) {
+        setUserPermissions(prev => ({ ...prev, canAccessFinancialData: true }));
+      }
     } catch (error) {
       if (error.response?.status === 403) {
         // User doesn't have permission to access financial data
         setUserPermissions(prev => ({ ...prev, canAccessFinancialData: false }));
         setFinancialTransactions([]);
-        toast.info('Acesso aos dados financeiros restrito para seu usuário.');
+        console.log('Financial access restricted for this user');
       } else {
         handleApiError(error, 'Erro ao carregar transações financeiras.');
       }
