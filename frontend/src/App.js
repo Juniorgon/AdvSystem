@@ -4747,23 +4747,342 @@ Testemunhas:
     );
   };
 
-  // Agenda Component (placeholder)
+  // Agenda Component
   const Agenda = () => {
+    const [agendaTasks, setAgendaTasks] = useState([]);
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [viewMode, setViewMode] = useState('week'); // week, month
+
+    const fetchAgenda = async () => {
+      try {
+        const response = await axios.get(`${API}/tasks/my-agenda`);
+        setAgendaTasks(response.data);
+      } catch (error) {
+        handleApiError(error, 'Erro ao carregar agenda.');
+      }
+    };
+
+    useEffect(() => {
+      if (user?.role === 'lawyer') {
+        fetchAgenda();
+      }
+    }, [user]);
+
+    const getTasksForDate = (date) => {
+      return agendaTasks.filter(task => {
+        const taskDate = new Date(task.due_date).toDateString();
+        const checkDate = new Date(date).toDateString();
+        return taskDate === checkDate;
+      });
+    };
+
+    const getWeekDates = () => {
+      const startDate = new Date(selectedDate);
+      const dayOfWeek = startDate.getDay();
+      const diff = startDate.getDate() - dayOfWeek;
+      
+      const weekStart = new Date(startDate.setDate(diff));
+      const dates = [];
+      
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(weekStart);
+        date.setDate(weekStart.getDate() + i);
+        dates.push(date.toISOString().split('T')[0]);
+      }
+      
+      return dates;
+    };
+
+    const getPriorityIcon = (priority) => {
+      switch (priority) {
+        case 'high': return '🔴';
+        case 'medium': return '🟡';
+        case 'low': return '🟢';
+        default: return '⚪';
+      }
+    };
+
+    const getStatusIcon = (status) => {
+      switch (status) {
+        case 'completed': return '✅';
+        case 'in_progress': return '🔄';
+        case 'pending': return '⏳';
+        default: return '⏳';
+      }
+    };
+
+    if (user?.role !== 'lawyer') {
+      return (
+        <div className="p-6 text-center">
+          <h1 className="text-2xl font-bold text-white mb-4">📅 Agenda</h1>
+          <p className="text-gray-300">Agenda disponível apenas para advogados.</p>
+        </div>
+      );
+    }
+
     return (
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-white">📅 Agenda</h1>
-            <p className="text-gray-300">Gerencie seus compromissos e eventos</p>
+            <h1 className="text-2xl font-bold text-white">📅 Minha Agenda</h1>
+            <p className="text-gray-300">Visualize suas tarefas e compromissos</p>
+          </div>
+          <div className="flex items-center space-x-4">
+            <select
+              value={viewMode}
+              onChange={(e) => setViewMode(e.target.value)}
+              className="bg-gray-700 border border-gray-600 rounded-md text-white px-3 py-1 focus:outline-none focus:ring-2 focus:ring-orange-500"
+            >
+              <option value="week">Semana</option>
+              <option value="month">Mês</option>
+            </select>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="bg-gray-700 border border-gray-600 rounded-md text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+            <button
+              onClick={() => setCurrentPage('tasks')}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Gerenciar Tarefas
+            </button>
           </div>
         </div>
-        
-        <div className="bg-gray-800 rounded-lg shadow-lg p-8 text-center">
-          <div className="text-6xl mb-4">🚧</div>
-          <h2 className="text-xl font-bold text-white mb-2">Em Desenvolvimento</h2>
-          <p className="text-gray-400">
-            A funcionalidade de agenda está sendo desenvolvida e estará disponível em breve.
-          </p>
+
+        {/* Week View */}
+        {viewMode === 'week' && (
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+            {getWeekDates().map((date, index) => {
+              const dateObj = new Date(date);
+              const dayTasks = getTasksForDate(date);
+              const isToday = date === new Date().toISOString().split('T')[0];
+              const dayName = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][index];
+              
+              return (
+                <div
+                  key={date}
+                  className={`bg-gray-800 rounded-lg p-4 min-h-[300px] ${
+                    isToday ? 'ring-2 ring-orange-500' : ''
+                  }`}
+                >
+                  <div className="text-center mb-3">
+                    <div className="text-sm text-gray-400">{dayName}</div>
+                    <div className={`text-lg font-semibold ${isToday ? 'text-orange-400' : 'text-white'}`}>
+                      {dateObj.getDate()}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {dateObj.toLocaleDateString('pt-BR', { month: 'short' })}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {dayTasks.map(task => {
+                      const isOverdue = new Date(task.due_date) < new Date() && task.status !== 'completed';
+                      
+                      return (
+                        <div
+                          key={task.id}
+                          className={`p-2 rounded text-xs border-l-2 ${
+                            isOverdue 
+                              ? 'bg-red-900 bg-opacity-30 border-red-500' 
+                              : task.status === 'completed'
+                              ? 'bg-green-900 bg-opacity-30 border-green-500'
+                              : task.priority === 'high'
+                              ? 'bg-red-900 bg-opacity-30 border-red-400'
+                              : task.priority === 'medium'
+                              ? 'bg-yellow-900 bg-opacity-30 border-yellow-400'
+                              : 'bg-gray-700 border-gray-500'
+                          }`}
+                        >
+                          <div className="flex items-start space-x-1">
+                            <span className="text-xs">{getPriorityIcon(task.priority)}</span>
+                            <span className="text-xs">{getStatusIcon(task.status)}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-white truncate">{task.title}</div>
+                              {task.description && (
+                                <div className="text-gray-300 truncate text-xs mt-1">{task.description}</div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    
+                    {dayTasks.length === 0 && (
+                      <div className="text-center text-gray-500 text-xs mt-8">
+                        Nenhuma tarefa
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Month View */}
+        {viewMode === 'month' && (
+          <div className="bg-gray-800 rounded-lg p-6">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-white">
+                {new Date(selectedDate).toLocaleDateString('pt-BR', { 
+                  month: 'long', 
+                  year: 'numeric' 
+                }).replace(/^\w/, c => c.toUpperCase())}
+              </h3>
+            </div>
+            
+            <div className="space-y-4">
+              {agendaTasks
+                .filter(task => {
+                  const taskMonth = new Date(task.due_date).getMonth();
+                  const taskYear = new Date(task.due_date).getFullYear();
+                  const selectedMonth = new Date(selectedDate).getMonth();
+                  const selectedYear = new Date(selectedDate).getFullYear();
+                  return taskMonth === selectedMonth && taskYear === selectedYear;
+                })
+                .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
+                .map(task => {
+                  const isOverdue = new Date(task.due_date) < new Date() && task.status !== 'completed';
+                  const client = clients.find(c => c.id === task.client_id);
+                  
+                  return (
+                    <div
+                      key={task.id}
+                      className={`p-4 rounded-lg border-l-4 ${
+                        isOverdue 
+                          ? 'bg-red-900 bg-opacity-20 border-red-500' 
+                          : task.status === 'completed'
+                          ? 'bg-green-900 bg-opacity-20 border-green-500'
+                          : task.priority === 'high'
+                          ? 'bg-red-900 bg-opacity-20 border-red-400'
+                          : task.priority === 'medium'
+                          ? 'bg-yellow-900 bg-opacity-20 border-yellow-400'
+                          : 'bg-gray-700 border-gray-500'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <span>{getPriorityIcon(task.priority)}</span>
+                            <span>{getStatusIcon(task.status)}</span>
+                            <h4 className="font-semibold text-white">{task.title}</h4>
+                          </div>
+                          
+                          {task.description && (
+                            <p className="text-gray-300 text-sm mb-2">{task.description}</p>
+                          )}
+                          
+                          <div className="flex items-center space-x-4 text-sm text-gray-400">
+                            <span>📅 {new Date(task.due_date).toLocaleDateString('pt-BR')}</span>
+                            {client && <span>👤 {client.name}</span>}
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              task.priority === 'high' ? 'bg-red-100 text-red-800' :
+                              task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-green-100 text-green-800'
+                            }`}>
+                              {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
+                            </span>
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              task.status === 'completed' ? 'bg-green-100 text-green-800' :
+                              task.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {task.status === 'completed' ? 'Concluída' : 
+                               task.status === 'in_progress' ? 'Em Progresso' : 'Pendente'}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="text-right">
+                          {isOverdue && (
+                            <div className="text-red-400 font-semibold text-xs mb-1">VENCIDA</div>
+                          )}
+                          <div className="text-gray-400 text-xs">
+                            {new Date(task.due_date).toLocaleDateString('pt-BR', { 
+                              weekday: 'short',
+                              day: 'numeric',
+                              month: 'short'
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              
+              {agendaTasks.filter(task => {
+                const taskMonth = new Date(task.due_date).getMonth();
+                const taskYear = new Date(task.due_date).getFullYear();
+                const selectedMonth = new Date(selectedDate).getMonth();
+                const selectedYear = new Date(selectedDate).getFullYear();
+                return taskMonth === selectedMonth && taskYear === selectedYear;
+              }).length === 0 && (
+                <div className="text-center py-8 text-gray-400">
+                  <p>Nenhuma tarefa encontrada para este mês</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Summary Statistics */}
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-gray-800 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-500 rounded-lg mr-3">
+                <span className="text-white text-lg">📋</span>
+              </div>
+              <div>
+                <p className="text-gray-400 text-sm">Total de Tarefas</p>
+                <p className="text-white text-xl font-semibold">{agendaTasks.length}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-gray-800 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-yellow-500 rounded-lg mr-3">
+                <span className="text-white text-lg">⏳</span>
+              </div>
+              <div>
+                <p className="text-gray-400 text-sm">Pendentes</p>
+                <p className="text-white text-xl font-semibold">
+                  {agendaTasks.filter(t => t.status === 'pending').length}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-gray-800 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-red-500 rounded-lg mr-3">
+                <span className="text-white text-lg">🚨</span>
+              </div>
+              <div>
+                <p className="text-gray-400 text-sm">Vencidas</p>
+                <p className="text-white text-xl font-semibold">
+                  {agendaTasks.filter(t => new Date(t.due_date) < new Date() && t.status !== 'completed').length}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-gray-800 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-500 rounded-lg mr-3">
+                <span className="text-white text-lg">✅</span>
+              </div>
+              <div>
+                <p className="text-gray-400 text-sm">Concluídas</p>
+                <p className="text-white text-xl font-semibold">
+                  {agendaTasks.filter(t => t.status === 'completed').length}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
