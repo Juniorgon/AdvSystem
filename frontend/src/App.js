@@ -5178,6 +5178,8 @@ Testemunhas:
     switch(currentPage) {
       case 'dashboard':
         return <Dashboard />;
+      case 'notifications':
+        return <WhatsAppNotifications />;
       case 'tasks':
         return <Tasks />;
       case 'agenda':
