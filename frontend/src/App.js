@@ -2155,7 +2155,7 @@ Testemunhas:
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{client.cpf}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{client.phone}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{client.address.city}/{client.address.state}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{client.city}/{client.state}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                       <div className="flex items-center space-x-2">
                         <span className="bg-orange-100 text-orange-800 px-2 py-1 text-xs font-medium rounded-full">
