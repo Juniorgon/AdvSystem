@@ -62,6 +62,12 @@ function App() {
     branch_id: ''
   });
 
+  // Branch State
+  const [branches, setBranches] = useState([]);
+  const [selectedBranch, setSelectedBranch] = useState(null);
+  const [showBranchDrawer, setShowBranchDrawer] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   // State for new features
   const [tasks, setTasks] = useState([]);
   const [showTaskModal, setShowTaskModal] = useState(false);
