@@ -324,6 +324,20 @@ class TaskUpdate(BaseModel):
     client_id: Optional[str] = None
     process_id: Optional[str] = None
 
+class GoogleDriveAuthRequest(BaseModel):
+    authorization_code: str
+
+class ProcuracaoRequest(BaseModel):
+    client_id: str
+    process_id: Optional[str] = None
+    
+class DocumentInfo(BaseModel):
+    id: str
+    name: str
+    created_time: str
+    web_view_link: str
+    mime_type: str
+
 class DashboardStats(BaseModel):
     total_clients: int
     total_processes: int
