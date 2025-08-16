@@ -16,7 +16,7 @@ import time
 load_dotenv('/app/frontend/.env')
 
 # Get backend URL from environment
-BACKEND_URL = os.getenv('REACT_APP_BACKEND_URL', 'https://lawfirm-upgrade.preview.emergentagent.com')
+BACKEND_URL = os.getenv('REACT_APP_BACKEND_URL', 'https://legalflow-4.preview.emergentagent.com')
 API_BASE_URL = f"{BACKEND_URL}/api"
 
 class AdditionalAccessTester:
