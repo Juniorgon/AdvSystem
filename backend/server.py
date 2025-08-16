@@ -761,6 +761,22 @@ async def login_user(user_credentials: UserLogin, request: Request, db: Session 
 async def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
 
+@api_router.get("/auth/permissions")
+async def get_user_permissions(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get detailed user permissions"""
+    permissions = get_lawyer_permissions(current_user, db)
+    
+    return {
+        "user": {
+            "id": current_user.id,
+            "username": current_user.username,
+            "full_name": current_user.full_name,
+            "role": current_user.role,
+            "branch_id": current_user.branch_id
+        },
+        "permissions": permissions
+    }
+
 # Branch endpoints
 @api_router.post("/branches", response_model=Branch)
 async def create_branch(branch: BranchCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
