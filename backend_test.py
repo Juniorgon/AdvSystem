@@ -745,7 +745,7 @@ class BackendTester:
             self.log_test("Email-based Login", False, f"Exception: {str(e)}")
     
     def test_lawyer_management_and_authentication(self):
-        """Test lawyer creation and authentication with OAB"""
+        """Test lawyer creation and authentication with OAB and new fields"""
         print("\n=== Testing Lawyer Management and Authentication ===")
         
         # Ensure we have super admin token
@@ -764,7 +764,7 @@ class BackendTester:
                     elif 'Nova Prata' in branch['name']:
                         self.branch_ids['nova_prata'] = branch['id']
         
-        # Test 1: Create a test lawyer
+        # Test 1: Create a test lawyer with new fields
         if self.branch_ids.get('caxias'):
             lawyer_data = {
                 "full_name": "Dr. João Silva Advocacia",
@@ -773,7 +773,9 @@ class BackendTester:
                 "email": "joao.silva@gbadvocacia.com",
                 "phone": "(54) 99999-8888",
                 "specialization": "Direito Civil",
-                "branch_id": self.branch_ids['caxias']
+                "branch_id": self.branch_ids['caxias'],
+                "access_financial_data": True,
+                "allowed_branch_ids": [self.branch_ids['caxias']]
             }
             
             try:
@@ -783,7 +785,13 @@ class BackendTester:
                 if response.status_code == 200:
                     lawyer = response.json()
                     self.created_entities['lawyers'].append(lawyer['id'])
-                    self.log_test("Create Test Lawyer", True, f"Created lawyer: {lawyer['full_name']}")
+                    self.log_test("Create Test Lawyer with New Fields", True, f"Created lawyer: {lawyer['full_name']}")
+                    
+                    # Verify new fields
+                    if lawyer.get('access_financial_data') == True:
+                        self.log_test("Lawyer Financial Access Field", True, "access_financial_data field correctly set")
+                    else:
+                        self.log_test("Lawyer Financial Access Field", False, f"Expected True, got {lawyer.get('access_financial_data')}")
                     
                     # Test 2: Login as lawyer using email/OAB
                     lawyer_login_data = {
@@ -815,9 +823,60 @@ class BackendTester:
                         self.log_test("Lawyer Login (Email/OAB)", False, f"Exception: {str(e)}")
                         
                 else:
-                    self.log_test("Create Test Lawyer", False, f"HTTP {response.status_code}", response.text)
+                    self.log_test("Create Test Lawyer with New Fields", False, f"HTTP {response.status_code}", response.text)
             except Exception as e:
-                self.log_test("Create Test Lawyer", False, f"Exception: {str(e)}")
+                self.log_test("Create Test Lawyer with New Fields", False, f"Exception: {str(e)}")
+        
+        # Test 3: Create lawyer with restricted financial access
+        if self.branch_ids.get('nova_prata'):
+            restricted_lawyer_data = {
+                "full_name": "Dra. Maria Santos",
+                "oab_number": "654321",
+                "oab_state": "RS",
+                "email": "maria.santos@gbadvocacia.com",
+                "phone": "(54) 99999-7777",
+                "specialization": "Direito Trabalhista",
+                "branch_id": self.branch_ids['nova_prata'],
+                "access_financial_data": False,
+                "allowed_branch_ids": [self.branch_ids['nova_prata']]
+            }
+            
+            try:
+                response = self.session.post(f"{API_BASE_URL}/lawyers", 
+                                           json=restricted_lawyer_data,
+                                           headers={'Authorization': f'Bearer {self.auth_tokens.get("super_admin")}'})
+                if response.status_code == 200:
+                    lawyer = response.json()
+                    self.created_entities['lawyers'].append(lawyer['id'])
+                    self.log_test("Create Restricted Lawyer", True, f"Created restricted lawyer: {lawyer['full_name']}")
+                    
+                    # Verify restricted access
+                    if lawyer.get('access_financial_data') == False:
+                        self.log_test("Lawyer Restricted Financial Access", True, "access_financial_data correctly set to False")
+                    else:
+                        self.log_test("Lawyer Restricted Financial Access", False, f"Expected False, got {lawyer.get('access_financial_data')}")
+                    
+                    # Login as restricted lawyer
+                    restricted_login_data = {
+                        "username_or_email": restricted_lawyer_data['email'],
+                        "password": restricted_lawyer_data['oab_number']
+                    }
+                    
+                    try:
+                        login_response = self.session.post(f"{API_BASE_URL}/auth/login", json=restricted_login_data)
+                        if login_response.status_code == 200:
+                            token_data = login_response.json()
+                            self.auth_tokens['restricted_lawyer'] = token_data['access_token']
+                            self.log_test("Restricted Lawyer Login", True, f"Restricted lawyer logged in successfully")
+                        else:
+                            self.log_test("Restricted Lawyer Login", False, f"HTTP {login_response.status_code}", login_response.text)
+                    except Exception as e:
+                        self.log_test("Restricted Lawyer Login", False, f"Exception: {str(e)}")
+                        
+                else:
+                    self.log_test("Create Restricted Lawyer", False, f"HTTP {response.status_code}", response.text)
+            except Exception as e:
+                self.log_test("Create Restricted Lawyer", False, f"Exception: {str(e)}")
         else:
             self.log_test("Create Test Lawyer", False, "No Caxias branch ID available")
     
