@@ -148,7 +148,8 @@ class BackendTester:
         
         # Test 3: Get All Clients
         try:
-            response = self.session.get(f"{API_BASE_URL}/clients")
+            headers = {'Authorization': f'Bearer {self.auth_tokens.get("super_admin")}'} if 'super_admin' in self.auth_tokens else {}
+            response = self.session.get(f"{API_BASE_URL}/clients", headers=headers)
             if response.status_code == 200:
                 clients = response.json()
                 self.log_test("Get All Clients", True, f"Retrieved {len(clients)} clients")
