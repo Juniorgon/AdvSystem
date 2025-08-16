@@ -479,7 +479,7 @@ function App() {
       const response = await axios.get(`${API}/dashboard`);
       setDashboardStats(response.data);
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      handleApiError(error, 'Erro ao carregar dados do dashboard.');
     }
   };
 
@@ -489,7 +489,65 @@ function App() {
       const response = await axios.get(`${API}/clients`);
       setClients(response.data);
     } catch (error) {
-      console.error('Error fetching clients:', error);
+      handleApiError(error, 'Erro ao carregar clientes.');
+    }
+  };
+
+  // Fetch processes
+  const fetchProcesses = async () => {
+    try {
+      const response = await axios.get(`${API}/processes`);
+      setProcesses(response.data);
+    } catch (error) {
+      handleApiError(error, 'Erro ao carregar processos.');
+    }
+  };
+
+  // Fetch financial transactions
+  const fetchFinancialTransactions = async () => {
+    try {
+      const response = await axios.get(`${API}/financial`);
+      setFinancialTransactions(response.data);
+      setUserPermissions(prev => ({ ...prev, canAccessFinancialData: true }));
+    } catch (error) {
+      if (error.response?.status === 403) {
+        // User doesn't have permission to access financial data
+        setUserPermissions(prev => ({ ...prev, canAccessFinancialData: false }));
+        setFinancialTransactions([]);
+        toast.info('Acesso aos dados financeiros restrito para seu usuário.');
+      } else {
+        handleApiError(error, 'Erro ao carregar transações financeiras.');
+      }
+    }
+  };
+
+  // Fetch contracts
+  const fetchContracts = async () => {
+    try {
+      const response = await axios.get(`${API}/contracts`);
+      setContracts(response.data);
+    } catch (error) {
+      handleApiError(error, 'Erro ao carregar contratos.');
+    }
+  };
+
+  // Fetch lawyers
+  const fetchLawyers = async () => {
+    try {
+      const response = await axios.get(`${API}/lawyers`);
+      setLawyers(response.data);
+    } catch (error) {
+      handleApiError(error, 'Erro ao carregar advogados.');
+    }
+  };
+
+  // Fetch tasks
+  const fetchTasks = async () => {
+    try {
+      const response = await axios.get(`${API}/tasks`);
+      setTasks(response.data);
+    } catch (error) {
+      handleApiError(error, 'Erro ao carregar tarefas.');
     }
   };
 
