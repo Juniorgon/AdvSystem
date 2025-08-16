@@ -1910,7 +1910,7 @@ Testemunhas:
                     <label className="block text-gray-300 text-sm font-medium mb-1">Rua</label>
                     <input
                       type="text"
-                      value={formData.address.street}
+                      value={formData.street}
                       onChange={(e) => handleAddressChange('street', e.target.value)}
                       className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
                       required
@@ -1920,7 +1920,7 @@ Testemunhas:
                     <label className="block text-gray-300 text-sm font-medium mb-1">Número</label>
                     <input
                       type="text"
-                      value={formData.address.number}
+                      value={formData.number}
                       onChange={(e) => handleAddressChange('number', e.target.value)}
                       className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
                       required
@@ -1930,7 +1930,7 @@ Testemunhas:
                     <label className="block text-gray-300 text-sm font-medium mb-1">Cidade</label>
                     <input
                       type="text"
-                      value={formData.address.city}
+                      value={formData.city}
                       onChange={(e) => handleAddressChange('city', e.target.value)}
                       className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
                       required
@@ -1940,7 +1940,7 @@ Testemunhas:
                     <label className="block text-gray-300 text-sm font-medium mb-1">Bairro</label>
                     <input
                       type="text"
-                      value={formData.address.district}
+                      value={formData.district}
                       onChange={(e) => handleAddressChange('district', e.target.value)}
                       className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
                       required
