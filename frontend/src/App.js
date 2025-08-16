@@ -1666,9 +1666,15 @@ Testemunhas:
         civil_status: client.civil_status,
         profession: client.profession,
         cpf: client.cpf,
-        address: client.address,
+        street: client.street,
+        number: client.number,
+        city: client.city,
+        district: client.district,
+        state: client.state,
+        complement: client.complement || '',
         phone: client.phone,
-        client_type: client.client_type
+        client_type: client.client_type,
+        branch_id: client.branch_id
       });
       setShowForm(true);
     };
