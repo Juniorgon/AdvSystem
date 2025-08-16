@@ -168,11 +168,15 @@ class RefinedAccessControlTester:
             self.log_test("Create Restricted Lawyer Prerequisites", False, "No branch available")
             return None
         
+        # Generate unique OAB number based on timestamp
+        import time
+        unique_oab = f"{int(time.time()) % 1000000}"
+        
         lawyer_data = {
             "full_name": "Dr. Advogado Restrito",
-            "oab_number": "999888",
+            "oab_number": unique_oab,
             "oab_state": "RS",
-            "email": "advogado.restrito@gbadvocacia.com",
+            "email": f"advogado.restrito.{unique_oab}@gbadvocacia.com",
             "phone": "(54) 99999-9999",
             "specialization": "Direito Civil",
             "branch_id": self.branch_ids['caxias'],
