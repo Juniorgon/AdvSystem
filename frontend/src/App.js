@@ -4297,6 +4297,63 @@ Testemunhas:
                   placeholder="Ex: Direito Tributário, Direito Trabalhista..."
                 />
               </div>
+
+              {/* New Permission Fields */}
+              <div className="border-t border-gray-600 pt-4">
+                <h4 className="text-lg font-semibold text-white mb-4">🔐 Permissões de Acesso</h4>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      id="access_financial_data"
+                      checked={formData.access_financial_data}
+                      onChange={(e) => setFormData({...formData, access_financial_data: e.target.checked})}
+                      className="w-4 h-4 text-orange-600 bg-gray-700 border-gray-600 rounded focus:ring-orange-500 focus:ring-2"
+                    />
+                    <label htmlFor="access_financial_data" className="text-gray-300">
+                      💰 Permitir acesso aos dados financeiros do escritório
+                    </label>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">
+                      🏢 Filiais com Acesso aos Dados
+                    </label>
+                    <div className="text-xs text-gray-400 mb-2">
+                      Se nenhuma filial for selecionada, o advogado terá acesso apenas à filial onde está cadastrado
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto">
+                      {branches.map(branch => (
+                        <div key={branch.id} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={`branch_${branch.id}`}
+                            checked={formData.allowed_branch_ids.includes(branch.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setFormData({
+                                  ...formData,
+                                  allowed_branch_ids: [...formData.allowed_branch_ids, branch.id]
+                                });
+                              } else {
+                                setFormData({
+                                  ...formData,
+                                  allowed_branch_ids: formData.allowed_branch_ids.filter(id => id !== branch.id)
+                                });
+                              }
+                            }}
+                            className="w-3 h-3 text-orange-600 bg-gray-700 border-gray-600 rounded focus:ring-orange-500"
+                          />
+                          <label htmlFor={`branch_${branch.id}`} className="text-sm text-gray-300">
+                            {branch.name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
               
               <div className="flex justify-end space-x-2">
                 <button
