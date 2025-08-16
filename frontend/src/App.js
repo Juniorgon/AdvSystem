@@ -4367,7 +4367,9 @@ Testemunhas:
                       oab_state: 'SP',
                       email: '',
                       phone: '',
-                      specialization: ''
+                      specialization: '',
+                      access_financial_data: true,
+                      allowed_branch_ids: []
                     });
                   }}
                   className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
