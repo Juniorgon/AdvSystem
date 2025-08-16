@@ -812,7 +812,14 @@ async def get_branches(current_user: User = Depends(get_current_user), db: Sessi
 
 # Client endpoints
 @api_router.post("/clients", response_model=Client)
-async def create_client(client: ClientCreate, db: Session = Depends(get_db)):
+async def create_client(client: ClientCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Validate branch access
+    if not validate_branch_access(current_user, client.branch_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso negado: Você não tem permissão para criar clientes nesta filial"
+        )
+    
     client_data = client.dict()
     # Extract address
     address = client_data.pop('address')
@@ -838,17 +845,32 @@ async def get_clients(current_user: User = Depends(get_current_user), db: Sessio
     return [Client.from_orm(client) for client in clients]
 
 @api_router.get("/clients/{client_id}", response_model=Client)
-async def get_client(client_id: str, db: Session = Depends(get_db)):
+async def get_client(client_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     client = db.query(DBClient).filter(DBClient.id == client_id).first()
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Validate branch access
+    if not validate_branch_access(current_user, client.branch_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso negado: Você não tem permissão para acessar clientes desta filial"
+        )
+    
     return Client.from_orm(client)
 
 @api_router.put("/clients/{client_id}", response_model=Client)
-async def update_client(client_id: str, client_update: ClientUpdate, db: Session = Depends(get_db)):
+async def update_client(client_id: str, client_update: ClientUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     client_db = db.query(DBClient).filter(DBClient.id == client_id).first()
     if not client_db:
         raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Validate branch access
+    if not validate_branch_access(current_user, client_db.branch_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso negado: Você não tem permissão para editar clientes desta filial"
+        )
     
     update_data = client_update.dict(exclude_unset=True)
     if 'address' in update_data:
@@ -865,10 +887,17 @@ async def update_client(client_id: str, client_update: ClientUpdate, db: Session
     return Client.from_orm(client_db)
 
 @api_router.delete("/clients/{client_id}")
-async def delete_client(client_id: str, db: Session = Depends(get_db)):
+async def delete_client(client_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     client = db.query(DBClient).filter(DBClient.id == client_id).first()
     if not client:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
+    
+    # Validate branch access
+    if not validate_branch_access(current_user, client.branch_id, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso negado: Você não tem permissão para excluir clientes desta filial"
+        )
     
     # Check dependencies
     dependencies = []
