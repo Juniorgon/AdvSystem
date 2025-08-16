@@ -5631,6 +5631,8 @@ Testemunhas:
     switch(currentPage) {
       case 'dashboard':
         return <Dashboard />;
+      case 'documents':
+        return <GoogleDriveDocuments />;
       case 'notifications':
         return <WhatsAppNotifications />;
       case 'tasks':
