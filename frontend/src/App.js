@@ -86,8 +86,37 @@ function App() {
   // User permission states
   const [userPermissions, setUserPermissions] = useState({
     canAccessFinancialData: true,
-    allowedBranches: []
+    accessibleBranches: [],
+    canCreateTasks: false,
+    canEditTasks: false,
+    canManageUsers: false,
+    canManageLawyers: false,
+    canAccessGoogleDrive: false,
+    canAccessWhatsApp: false,
+    canAccessSecurityReports: false
   });
+
+  // Fetch user permissions
+  const fetchUserPermissions = async () => {
+    try {
+      const response = await axios.get(`${API}/auth/permissions`);
+      setUserPermissions(response.data.permissions);
+    } catch (error) {
+      console.error('Error fetching user permissions:', error);
+      // Set default restrictive permissions on error
+      setUserPermissions({
+        canAccessFinancialData: false,
+        accessibleBranches: [],
+        canCreateTasks: false,
+        canEditTasks: false,
+        canManageUsers: false,
+        canManageLawyers: false,
+        canAccessGoogleDrive: false,
+        canAccessWhatsApp: false,
+        canAccessSecurityReports: false
+      });
+    }
+  };
 
   // Form handling for client creation/editing
   const [formData, setFormData] = useState({
