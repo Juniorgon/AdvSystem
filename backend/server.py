@@ -1583,6 +1583,251 @@ async def get_client_documents(
             detail="Error retrieving client documents"
         )
 
+# WhatsApp Integration endpoints
+@api_router.get("/whatsapp/status")
+async def get_whatsapp_status(current_user: User = Depends(get_current_user)):
+    """Get WhatsApp service status and scheduler information"""
+    try:
+        # Only lawyers and admins can check status
+        if current_user.role not in [UserRole.admin, UserRole.lawyer]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied"
+            )
+        
+        whatsapp_enabled = os.getenv("WHATSAPP_ENABLED", "false").lower() == "true"
+        
+        # Return status info
+        status_info = {
+            "service_status": "running",
+            "whatsapp_enabled": whatsapp_enabled,
+            "mode": "simulation" if not whatsapp_enabled else "production",
+            "phone_number": "+55 54 99710-2525",
+            "scheduler_jobs": [
+                {"time": "09:00", "description": "Daily payment reminder check"},
+                {"time": "14:00", "description": "Daily overdue payment check"}
+            ]
+        }
+        
+        return status_info
+        
+    except Exception as e:
+        logger.error(f"Error getting WhatsApp status: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Error retrieving WhatsApp status"
+        )
+
+@api_router.post("/whatsapp/send-message")
+async def send_whatsapp_message(
+    message_request: WhatsAppMessage,
+    current_user: User = Depends(get_current_user)
+):
+    """Send custom WhatsApp message"""
+    try:
+        # Only lawyers and admins can send messages
+        if current_user.role not in [UserRole.admin, UserRole.lawyer]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied"
+            )
+        
+        whatsapp_service = WhatsAppService()
+        
+        result = await whatsapp_service.send_message(
+            phone_number=message_request.phone_number,
+            message=message_request.message
+        )
+        
+        if result["success"]:
+            return {
+                "success": True,
+                "message": "Message sent successfully",
+                "phone_number": message_request.phone_number,
+                "simulated": result.get("simulated", False)
+            }
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to send message: {result.get('error', 'Unknown error')}"
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error sending WhatsApp message: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Error sending WhatsApp message"
+        )
+
+@api_router.post("/whatsapp/send-reminder/{transaction_id}")
+async def send_whatsapp_reminder(
+    transaction_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Send manual payment reminder for a specific transaction"""
+    try:
+        # Only lawyers and admins can send reminders
+        if current_user.role not in [UserRole.admin, UserRole.lawyer]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied"
+            )
+        
+        # Get transaction
+        transaction = db.query(DBFinancialTransaction).filter(
+            DBFinancialTransaction.id == transaction_id
+        ).first()
+        
+        if not transaction:
+            raise HTTPException(
+                status_code=404,
+                detail="Transaction not found"
+            )
+        
+        # Check branch access
+        if not validate_branch_access(current_user, transaction.branch_id, db):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied to this transaction"
+            )
+        
+        # Get client
+        client = db.query(DBClient).filter(
+            DBClient.id == transaction.client_id
+        ).first()
+        
+        if not client:
+            raise HTTPException(
+                status_code=404,
+                detail="Client not found"
+            )
+        
+        if not client.phone:
+            raise HTTPException(
+                status_code=400,
+                detail="Client does not have a phone number"
+            )
+        
+        # Send reminder
+        whatsapp_service = WhatsAppService()
+        
+        result = await whatsapp_service.send_payment_reminder(
+            client_name=client.name,
+            phone_number=client.phone,
+            contract_title=transaction.description,
+            installment_value=transaction.value,
+            due_date=transaction.due_date
+        )
+        
+        if result["success"]:
+            return {
+                "success": True,
+                "message": "Payment reminder sent successfully",
+                "client_name": client.name,
+                "phone_number": client.phone,
+                "transaction_id": transaction_id,
+                "simulated": result.get("simulated", False)
+            }
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to send reminder: {result.get('error', 'Unknown error')}"
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error sending WhatsApp reminder: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Error sending WhatsApp reminder"
+        )
+
+@api_router.post("/whatsapp/check-payments")
+async def check_overdue_payments(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Check for overdue payments and send bulk reminders (Admin only)"""
+    try:
+        # Only admins can trigger bulk payment checks
+        if current_user.role != UserRole.admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only administrators can trigger bulk payment verification"
+            )
+        
+        # Get accessible branches
+        accessible_branches = get_accessible_branches(current_user, db)
+        
+        # Query overdue transactions
+        current_date = datetime.now().date()
+        
+        query = db.query(DBFinancialTransaction).filter(
+            DBFinancialTransaction.status == TransactionStatus.pendente,
+            func.date(DBFinancialTransaction.due_date) < current_date
+        )
+        
+        if accessible_branches:
+            query = query.filter(DBFinancialTransaction.branch_id.in_(accessible_branches))
+        
+        overdue_transactions = query.all()
+        
+        sent_count = 0
+        failed_count = 0
+        
+        whatsapp_service = WhatsAppService()
+        
+        for transaction in overdue_transactions:
+            try:
+                # Get client
+                client = db.query(DBClient).filter(
+                    DBClient.id == transaction.client_id
+                ).first()
+                
+                if not client or not client.phone:
+                    failed_count += 1
+                    continue
+                
+                # Calculate days overdue
+                days_overdue = (current_date - transaction.due_date.date()).days
+                
+                # Send overdue notice
+                result = await whatsapp_service.send_overdue_notice(
+                    client_name=client.name,
+                    phone_number=client.phone,
+                    contract_title=transaction.description,
+                    installment_value=transaction.value,
+                    days_overdue=days_overdue
+                )
+                
+                if result["success"]:
+                    sent_count += 1
+                else:
+                    failed_count += 1
+                    
+            except Exception as e:
+                logger.error(f"Error processing transaction {transaction.id}: {e}")
+                failed_count += 1
+                continue
+        
+        return {
+            "success": True,
+            "message": "Bulk payment verification completed",
+            "total_overdue": len(overdue_transactions),
+            "reminders_sent": sent_count,
+            "failed": failed_count
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in bulk payment check: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Error performing bulk payment verification"
+        )
+
 # Dashboard endpoint
 @api_router.get("/dashboard", response_model=DashboardStats)
 async def get_dashboard_stats(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
