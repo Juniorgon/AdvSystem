@@ -1265,6 +1265,13 @@ async def get_contract(contract_id: str, db: Session = Depends(get_db)):
 # Task endpoints
 @api_router.post("/tasks", response_model=Task)
 async def create_task(task: TaskCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Only admins can create tasks
+    if current_user.role != UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Apenas administradores podem criar tarefas"
+        )
+    
     # Verify lawyer exists
     lawyer = db.query(DBLawyer).filter(DBLawyer.id == task.assigned_lawyer_id).first()
     if not lawyer:
