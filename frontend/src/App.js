@@ -231,7 +231,75 @@ function App() {
     });
   };
 
-  // Generic error handler for better user feedback
+  // Data fetching functions
+  const fetchDashboardData = async () => {
+    try {
+      const response = await axios.get(`${API}/dashboard`);
+      setDashboardStats(response.data);
+    } catch (error) {
+      handleApiError(error, 'Erro ao carregar dados do dashboard.');
+    }
+  };
+
+  const fetchClients = async () => {
+    try {
+      const response = await axios.get(`${API}/clients`);
+      setClients(response.data);
+    } catch (error) {
+      handleApiError(error, 'Erro ao carregar clientes.');
+    }
+  };
+
+  const fetchProcesses = async () => {
+    try {
+      const response = await axios.get(`${API}/processes`);
+      setProcesses(response.data);
+    } catch (error) {
+      handleApiError(error, 'Erro ao carregar processos.');
+    }
+  };
+
+  const fetchFinancialTransactions = async () => {
+    try {
+      const response = await axios.get(`${API}/financial`);
+      setFinancialTransactions(response.data);
+    } catch (error) {
+      if (error.response?.status === 403) {
+        // User doesn't have permission to access financial data
+        setUserPermissions(prev => ({ ...prev, canAccessFinancialData: false }));
+        setFinancialTransactions([]);
+      } else {
+        handleApiError(error, 'Erro ao carregar transações financeiras.');
+      }
+    }
+  };
+
+  const fetchContracts = async () => {
+    try {
+      const response = await axios.get(`${API}/contracts`);
+      setContracts(response.data);
+    } catch (error) {
+      handleApiError(error, 'Erro ao carregar contratos.');
+    }
+  };
+
+  const fetchLawyers = async () => {
+    try {
+      const response = await axios.get(`${API}/lawyers`);
+      setLawyers(response.data);
+    } catch (error) {
+      handleApiError(error, 'Erro ao carregar advogados.');
+    }
+  };
+
+  const fetchTasks = async () => {
+    try {
+      const response = await axios.get(`${API}/tasks`);
+      setTasks(response.data);
+    } catch (error) {
+      handleApiError(error, 'Erro ao carregar tarefas.');
+    }
+  };
   const handleApiError = (error, defaultMessage) => {
     console.error('API Error:', error);
     
