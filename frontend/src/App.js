@@ -1362,6 +1362,386 @@ function App() {
     );
   };
 
+  // WhatsApp Notifications Component (Simulated)
+  const WhatsAppNotifications = () => {
+    const [notifications, setNotifications] = useState([]);
+    const [sendingNotification, setSendingNotification] = useState(false);
+    const [notificationForm, setNotificationForm] = useState({
+      client_id: '',
+      message_template: 'payment_reminder',
+      custom_message: '',
+      schedule_date: '',
+      phone_number: ''
+    });
+
+    const messageTemplates = {
+      payment_reminder: {
+        title: 'Lembrete de Pagamento',
+        template: 'Olá {{client_name}}, sua parcela no valor de R$ {{amount}} vence em {{days_until_due}} dias. Para mais informações, entre em contato conosco.'
+      },
+      overdue_payment: {
+        title: 'Cobrança de Pagamento Vencido',
+        template: 'Olá {{client_name}}, sua parcela de R$ {{amount}} venceu em {{days_overdue}} dias. Por favor, regularize sua situação.'
+      },
+      process_update: {
+        title: 'Atualização de Processo',
+        template: 'Olá {{client_name}}, há uma atualização importante no seu processo {{process_number}}. Entre em contato para mais detalhes.'
+      },
+      meeting_reminder: {
+        title: 'Lembrete de Reunião',
+        template: 'Olá {{client_name}}, lembramos sobre nossa reunião agendada para {{meeting_date}}. Confirmamos sua presença?'
+      },
+      contract_expiry: {
+        title: 'Vencimento de Contrato',
+        template: 'Olá {{client_name}}, seu contrato vence em {{days_until_expiry}} dias. Entre em contato para renovação.'
+      },
+      custom: {
+        title: 'Mensagem Personalizada',
+        template: ''
+      }
+    };
+
+    const handleSendNotification = async (e) => {
+      e.preventDefault();
+      setSendingNotification(true);
+
+      try {
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        const client = clients.find(c => c.id === notificationForm.client_id);
+        const template = messageTemplates[notificationForm.message_template];
+        
+        let message = notificationForm.message_template === 'custom' 
+          ? notificationForm.custom_message 
+          : template.template;
+
+        // Replace placeholders (simulation)
+        if (client) {
+          message = message
+            .replace('{{client_name}}', client.name)
+            .replace('{{process_number}}', 'PROC-2025-001')
+            .replace('{{amount}}', 'R$ 2.500,00')
+            .replace('{{days_until_due}}', '7')
+            .replace('{{days_overdue}}', '3')
+            .replace('{{meeting_date}}', '15/01/2025 às 14:00')
+            .replace('{{days_until_expiry}}', '30');
+        }
+
+        // Add to notifications list (simulation)
+        const newNotification = {
+          id: Date.now(),
+          client_id: notificationForm.client_id,
+          client_name: client?.name || 'Cliente',
+          phone_number: notificationForm.phone_number || client?.phone || '(00) 00000-0000',
+          message,
+          template_type: notificationForm.message_template,
+          template_title: template.title,
+          status: 'sent',
+          sent_at: new Date().toISOString(),
+          scheduled_for: notificationForm.schedule_date || null
+        };
+
+        setNotifications(prev => [newNotification, ...prev]);
+        
+        // Reset form
+        setNotificationForm({
+          client_id: '',
+          message_template: 'payment_reminder',
+          custom_message: '',
+          schedule_date: '',
+          phone_number: ''
+        });
+
+        toast.success('📱 Notificação WhatsApp enviada com sucesso!');
+        
+      } catch (error) {
+        toast.error('Erro ao enviar notificação WhatsApp.');
+      } finally {
+        setSendingNotification(false);
+      }
+    };
+
+    const getOverduePayments = () => {
+      return financialTransactions.filter(ft => 
+        ft.status === 'vencido' || (new Date(ft.due_date) < new Date() && ft.status === 'pendente')
+      );
+    };
+
+    const sendBulkReminders = async () => {
+      const overduePayments = getOverduePayments();
+      
+      if (overduePayments.length === 0) {
+        toast.info('Não há pagamentos vencidos para enviar lembretes.');
+        return;
+      }
+
+      setSendingNotification(true);
+      
+      try {
+        // Simulate bulk sending
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        const bulkNotifications = overduePayments.map((payment, index) => {
+          const client = clients.find(c => c.id === payment.client_id);
+          const message = messageTemplates.overdue_payment.template
+            .replace('{{client_name}}', client?.name || 'Cliente')
+            .replace('{{amount}}', `R$ ${payment.value.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`)
+            .replace('{{days_overdue}}', Math.ceil((new Date() - new Date(payment.due_date)) / (1000 * 60 * 60 * 24)));
+
+          return {
+            id: Date.now() + index,
+            client_id: payment.client_id,
+            client_name: client?.name || 'Cliente',
+            phone_number: client?.phone || '(00) 00000-0000',
+            message,
+            template_type: 'overdue_payment',
+            template_title: 'Cobrança de Pagamento Vencido',
+            status: 'sent',
+            sent_at: new Date().toISOString(),
+            scheduled_for: null
+          };
+        });
+
+        setNotifications(prev => [...bulkNotifications, ...prev]);
+        toast.success(`📱 ${bulkNotifications.length} notificações WhatsApp enviadas com sucesso!`);
+        
+      } catch (error) {
+        toast.error('Erro ao enviar notificações em lote.');
+      } finally {
+        setSendingNotification(false);
+      }
+    };
+
+    // Check if user is admin
+    if (user?.role !== 'admin') {
+      return (
+        <div className="p-6">
+          <div className="bg-red-900 bg-opacity-30 border border-red-600 rounded-lg p-6 text-center">
+            <h2 className="text-2xl font-bold text-red-400 mb-4">🚫 Acesso Restrito</h2>
+            <p className="text-red-200">
+              Apenas administradores podem acessar as notificações WhatsApp.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-white">📱 Notificações WhatsApp</h1>
+            <p className="text-gray-300">Sistema simulado de lembretes e cobrança via WhatsApp</p>
+          </div>
+          <div className="flex space-x-3">
+            <button
+              onClick={sendBulkReminders}
+              disabled={sendingNotification || getOverduePayments().length === 0}
+              className="bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+            >
+              {sendingNotification ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Enviando...</span>
+                </>
+              ) : (
+                <>
+                  <span>🚨</span>
+                  <span>Cobrar Vencidos ({getOverduePayments().length})</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Send Notification Form */}
+          <div className="lg:col-span-1">
+            <div className="bg-gray-800 rounded-lg p-6">
+              <h2 className="text-xl font-bold text-white mb-4">📤 Enviar Notificação</h2>
+              
+              <form onSubmit={handleSendNotification} className="space-y-4">
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Cliente</label>
+                  <select
+                    value={notificationForm.client_id}
+                    onChange={(e) => setNotificationForm(prev => ({ ...prev, client_id: e.target.value }))}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    required
+                  >
+                    <option value="">Selecione um cliente...</option>
+                    {clients.map(client => (
+                      <option key={client.id} value={client.id}>
+                        {client.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Telefone (opcional)</label>
+                  <input
+                    type="tel"
+                    value={notificationForm.phone_number}
+                    onChange={(e) => setNotificationForm(prev => ({ ...prev, phone_number: e.target.value }))}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="(00) 00000-0000"
+                  />
+                  <div className="text-xs text-gray-400 mt-1">
+                    Se vazio, usará o telefone do cliente
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Tipo de Mensagem</label>
+                  <select
+                    value={notificationForm.message_template}
+                    onChange={(e) => setNotificationForm(prev => ({ ...prev, message_template: e.target.value }))}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    {Object.entries(messageTemplates).map(([key, template]) => (
+                      <option key={key} value={key}>
+                        {template.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {notificationForm.message_template === 'custom' && (
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-1">Mensagem Personalizada</label>
+                    <textarea
+                      value={notificationForm.custom_message}
+                      onChange={(e) => setNotificationForm(prev => ({ ...prev, custom_message: e.target.value }))}
+                      className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      rows="4"
+                      placeholder="Digite sua mensagem personalizada..."
+                      required
+                    />
+                  </div>
+                )}
+
+                {notificationForm.message_template !== 'custom' && (
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-1">Preview da Mensagem</label>
+                    <div className="bg-gray-700 p-3 rounded-md text-gray-300 text-sm border border-gray-600">
+                      {messageTemplates[notificationForm.message_template]?.template}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">Agendar Envio (opcional)</label>
+                  <input
+                    type="datetime-local"
+                    value={notificationForm.schedule_date}
+                    onChange={(e) => setNotificationForm(prev => ({ ...prev, schedule_date: e.target.value }))}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    min={new Date().toISOString().slice(0, 16)}
+                  />
+                  <div className="text-xs text-gray-400 mt-1">
+                    Se vazio, será enviado imediatamente
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={sendingNotification}
+                  className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                >
+                  {sendingNotification ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Enviando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>📱</span>
+                      <span>Enviar WhatsApp</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+
+            {/* Statistics */}
+            <div className="bg-gray-800 rounded-lg p-6 mt-6">
+              <h3 className="text-lg font-semibold text-white mb-4">📊 Estatísticas</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">Enviadas Hoje:</span>
+                  <span className="text-white font-semibold">
+                    {notifications.filter(n => 
+                      new Date(n.sent_at).toDateString() === new Date().toDateString()
+                    ).length}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">Total Enviadas:</span>
+                  <span className="text-white font-semibold">{notifications.length}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">Pagamentos Vencidos:</span>
+                  <span className="text-red-400 font-semibold">{getOverduePayments().length}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Notifications History */}
+          <div className="lg:col-span-2">
+            <div className="bg-gray-800 rounded-lg p-6">
+              <h2 className="text-xl font-bold text-white mb-4">📋 Histórico de Notificações</h2>
+              
+              {notifications.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <div className="text-4xl mb-4">📱</div>
+                  <p>Nenhuma notificação enviada ainda</p>
+                  <p className="text-sm mt-2">Use o formulário ao lado para enviar a primeira notificação</p>
+                </div>
+              ) : (
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {notifications.map(notification => (
+                    <div key={notification.id} className="bg-gray-700 rounded-lg p-4 border-l-4 border-green-500">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h4 className="font-semibold text-white">{notification.template_title}</h4>
+                          <p className="text-sm text-gray-300">
+                            Para: {notification.client_name} • {notification.phone_number}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs text-gray-400">
+                            {new Date(notification.sent_at).toLocaleString('pt-BR')}
+                          </div>
+                          <div className="flex items-center space-x-1 mt-1">
+                            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                            <span className="text-xs text-green-400">Enviada</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gray-800 p-3 rounded text-sm text-gray-300 border border-gray-600">
+                        "{notification.message}"
+                      </div>
+
+                      {notification.scheduled_for && (
+                        <div className="text-xs text-yellow-400 mt-2">
+                          ⏰ Agendada para: {new Date(notification.scheduled_for).toLocaleString('pt-BR')}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Clients Component
   const Clients = () => {
     const [showForm, setShowForm] = useState(false);
