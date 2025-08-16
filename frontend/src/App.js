@@ -4880,6 +4880,23 @@ Testemunhas:
       branch_id: ''
     });
 
+    // Check if user has financial access
+    const hasFinancialAccess = () => {
+      if (user?.role === 'admin') return true;
+      
+      if (user?.role === 'lawyer') {
+        const lawyer = lawyers.find(l => l.email === user.email);
+        return lawyer?.access_financial_data !== false;
+      }
+      
+      return false;
+    };
+
+    // Check if user can create/edit tasks (admin only)
+    const canManageTasks = () => {
+      return user?.role === 'admin';
+    };
+
     const resetTaskForm = () => {
       setTaskFormData({
         title: '',
@@ -4896,6 +4913,12 @@ Testemunhas:
 
     const handleTaskSubmit = async (e) => {
       e.preventDefault();
+      
+      if (!canManageTasks()) {
+        toast.error('🚫 Apenas administradores podem criar ou editar tarefas.');
+        return;
+      }
+
       try {
         setLoading(true);
         
@@ -4929,6 +4952,11 @@ Testemunhas:
     };
 
     const editTask = (task) => {
+      if (!canManageTasks()) {
+        toast.error('🚫 Apenas administradores podem editar tarefas.');
+        return;
+      }
+
       setEditingTask(task);
       setTaskFormData({
         title: task.title,
@@ -4951,6 +4979,11 @@ Testemunhas:
     };
 
     const deleteTask = async (taskId) => {
+      if (!canManageTasks()) {
+        toast.error('🚫 Apenas administradores podem excluir tarefas.');
+        return;
+      }
+
       if (!window.confirm('Tem certeza que deseja excluir esta tarefa?')) return;
       
       try {
@@ -4980,23 +5013,53 @@ Testemunhas:
       }
     };
 
+    // Filter tasks based on user role
+    const userTasks = user?.role === 'lawyer' 
+      ? tasks.filter(task => {
+          const lawyer = lawyers.find(l => l.email === user.email);
+          return lawyer && task.assigned_lawyer_id === lawyer.id;
+        })
+      : tasks;
+
     return (
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-bold text-white">📋 Gestão de Tarefas</h1>
-            <p className="text-gray-300">Gerencie suas tarefas e atividades</p>
+            <p className="text-gray-300">
+              {user?.role === 'admin' 
+                ? 'Gerencie tarefas da equipe' 
+                : 'Visualize suas tarefas atribuídas'}
+            </p>
           </div>
-          <button
-            onClick={() => setShowTaskForm(true)}
-            className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors"
-          >
-            Nova Tarefa
-          </button>
+          {canManageTasks() && (
+            <button
+              onClick={() => setShowTaskForm(true)}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors"
+            >
+              Nova Tarefa
+            </button>
+          )}
         </div>
 
-        {/* Task Form Modal */}
-        {showTaskForm && (
+        {/* Access restriction notice for lawyers without financial permission */}
+        {user?.role === 'lawyer' && !hasFinancialAccess() && (
+          <div className="bg-yellow-900 bg-opacity-30 border border-yellow-600 rounded-lg p-4 mb-6">
+            <div className="flex items-center space-x-2">
+              <span className="text-yellow-400">⚠️</span>
+              <div>
+                <h3 className="text-yellow-400 font-semibold">Acesso Limitado</h3>
+                <p className="text-yellow-200 text-sm">
+                  Você pode visualizar suas tarefas, mas informações financeiras estão restritas. 
+                  Entre em contato com um administrador para mais detalhes.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Task Form Modal - Admin Only */}
+        {showTaskForm && canManageTasks() && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <h2 className="text-xl font-bold text-white mb-4">
@@ -5063,23 +5126,22 @@ Testemunhas:
                     </select>
                   </div>
                   
-                  {user?.role === 'admin' && (
-                    <div>
-                      <label className="block text-gray-300 text-sm font-medium mb-1">Advogado Responsável</label>
-                      <select
-                        value={taskFormData.assigned_lawyer_id}
-                        onChange={(e) => setTaskFormData(prev => ({ ...prev, assigned_lawyer_id: e.target.value }))}
-                        className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      >
-                        <option value="">Selecione um advogado...</option>
-                        {lawyers.map(lawyer => (
-                          <option key={lawyer.id} value={lawyer.id}>
-                            {lawyer.full_name} - {lawyer.oab_number}/{lawyer.oab_state}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-1">Advogado Responsável</label>
+                    <select
+                      value={taskFormData.assigned_lawyer_id}
+                      onChange={(e) => setTaskFormData(prev => ({ ...prev, assigned_lawyer_id: e.target.value }))}
+                      className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      required
+                    >
+                      <option value="">Selecione um advogado...</option>
+                      {lawyers.map(lawyer => (
+                        <option key={lawyer.id} value={lawyer.id}>
+                          {lawyer.full_name} - {lawyer.oab_number}/{lawyer.oab_state}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   
                   <div>
                     <label className="block text-gray-300 text-sm font-medium mb-1">Cliente (opcional)</label>
@@ -5145,13 +5207,17 @@ Testemunhas:
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Vencimento</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Prioridade</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Cliente</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Ações</th>
+                  {hasFinancialAccess() && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Cliente</th>
+                  )}
+                  {canManageTasks() && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Ações</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="bg-gray-800 divide-y divide-gray-700">
-                {tasks.length > 0 ? (
-                  tasks.map((task) => {
+                {userTasks.length > 0 ? (
+                  userTasks.map((task) => {
                     const client = clients.find(c => c.id === task.client_id);
                     const isOverdue = new Date(task.due_date) < new Date() && task.status !== 'completed';
                     
@@ -5181,30 +5247,34 @@ Testemunhas:
                             {task.status === 'completed' ? 'Concluída' : task.status === 'in_progress' ? 'Em Progresso' : 'Pendente'}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                          {client ? client.name : '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                          <button
-                            onClick={() => editTask(task)}
-                            className="text-orange-400 hover:text-orange-300 transition-colors"
-                          >
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => deleteTask(task.id)}
-                            className="text-red-400 hover:text-red-300 transition-colors"
-                          >
-                            Excluir
-                          </button>
-                        </td>
+                        {hasFinancialAccess() && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                            {client ? client.name : '-'}
+                          </td>
+                        )}
+                        {canManageTasks() && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                            <button
+                              onClick={() => editTask(task)}
+                              className="text-orange-400 hover:text-orange-300 transition-colors"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => deleteTask(task.id)}
+                              className="text-red-400 hover:text-red-300 transition-colors"
+                            >
+                              Excluir
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan="6" className="px-6 py-8 text-center text-gray-400">
-                      Nenhuma tarefa encontrada
+                    <td colSpan={hasFinancialAccess() && canManageTasks() ? "6" : hasFinancialAccess() ? "5" : "4"} className="px-6 py-8 text-center text-gray-400">
+                      {user?.role === 'lawyer' ? 'Nenhuma tarefa atribuída a você' : 'Nenhuma tarefa encontrada'}
                     </td>
                   </tr>
                 )}
