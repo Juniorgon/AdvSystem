@@ -4395,6 +4395,358 @@ Testemunhas:
     );
   };
 
+  // Tasks Component
+  const Tasks = () => {
+    const [showTaskForm, setShowTaskForm] = useState(false);
+    const [editingTask, setEditingTask] = useState(null);
+    const [taskFormData, setTaskFormData] = useState({
+      title: '',
+      description: '',
+      due_date: '',
+      priority: 'medium',
+      status: 'pending',
+      assigned_lawyer_id: '',
+      client_id: '',
+      process_id: '',
+      branch_id: ''
+    });
+
+    const resetTaskForm = () => {
+      setTaskFormData({
+        title: '',
+        description: '',
+        due_date: '',
+        priority: 'medium',
+        status: 'pending',
+        assigned_lawyer_id: '',
+        client_id: '',
+        process_id: '',
+        branch_id: getCurrentBranchId() || ''
+      });
+    };
+
+    const handleTaskSubmit = async (e) => {
+      e.preventDefault();
+      try {
+        setLoading(true);
+        
+        const branchId = getCurrentBranchId();
+        if (!branchId) {
+          toast.error('Selecione uma filial antes de criar a tarefa.');
+          return;
+        }
+
+        const taskData = {
+          ...taskFormData,
+          branch_id: branchId,
+          assigned_lawyer_id: taskFormData.assigned_lawyer_id || user?.id
+        };
+        
+        if (editingTask) {
+          await axios.put(`${API}/tasks/${editingTask.id}`, taskData);
+          toast.success('Tarefa atualizada com sucesso!');
+        } else {
+          await axios.post(`${API}/tasks`, taskData);
+          toast.success('Tarefa criada com sucesso!');
+        }
+        
+        cancelTaskEdit();
+        await fetchTasks();
+      } catch (error) {
+        handleApiError(error, 'Erro ao salvar tarefa. Verifique os dados e tente novamente.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const editTask = (task) => {
+      setEditingTask(task);
+      setTaskFormData({
+        title: task.title,
+        description: task.description || '',
+        due_date: task.due_date ? task.due_date.split('T')[0] : '',
+        priority: task.priority,
+        status: task.status,
+        assigned_lawyer_id: task.assigned_lawyer_id,
+        client_id: task.client_id || '',
+        process_id: task.process_id || '',
+        branch_id: task.branch_id
+      });
+      setShowTaskForm(true);
+    };
+
+    const cancelTaskEdit = () => {
+      setEditingTask(null);
+      resetTaskForm();
+      setShowTaskForm(false);
+    };
+
+    const deleteTask = async (taskId) => {
+      if (!window.confirm('Tem certeza que deseja excluir esta tarefa?')) return;
+      
+      try {
+        await axios.delete(`${API}/tasks/${taskId}`);
+        toast.success('Tarefa excluída com sucesso!');
+        await fetchTasks();
+      } catch (error) {
+        handleApiError(error, 'Erro ao excluir tarefa.');
+      }
+    };
+
+    const getPriorityColor = (priority) => {
+      switch (priority) {
+        case 'high': return 'bg-red-100 text-red-800';
+        case 'medium': return 'bg-yellow-100 text-yellow-800';
+        case 'low': return 'bg-green-100 text-green-800';
+        default: return 'bg-gray-100 text-gray-800';
+      }
+    };
+
+    const getStatusColor = (status) => {
+      switch (status) {
+        case 'completed': return 'bg-green-100 text-green-800';
+        case 'in_progress': return 'bg-blue-100 text-blue-800';
+        case 'pending': return 'bg-gray-100 text-gray-800';
+        default: return 'bg-gray-100 text-gray-800';
+      }
+    };
+
+    return (
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-white">📋 Gestão de Tarefas</h1>
+            <p className="text-gray-300">Gerencie suas tarefas e atividades</p>
+          </div>
+          <button
+            onClick={() => setShowTaskForm(true)}
+            className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors"
+          >
+            Nova Tarefa
+          </button>
+        </div>
+
+        {/* Task Form Modal */}
+        {showTaskForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <h2 className="text-xl font-bold text-white mb-4">
+                {editingTask ? 'Editar Tarefa' : 'Nova Tarefa'}
+              </h2>
+              
+              <form onSubmit={handleTaskSubmit}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-gray-300 text-sm font-medium mb-1">Título</label>
+                    <input
+                      type="text"
+                      value={taskFormData.title}
+                      onChange={(e) => setTaskFormData(prev => ({ ...prev, title: e.target.value }))}
+                      className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="md:col-span-2">
+                    <label className="block text-gray-300 text-sm font-medium mb-1">Descrição</label>
+                    <textarea
+                      value={taskFormData.description}
+                      onChange={(e) => setTaskFormData(prev => ({ ...prev, description: e.target.value }))}
+                      rows="3"
+                      className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-1">Data de Vencimento</label>
+                    <input
+                      type="date"
+                      value={taskFormData.due_date}
+                      onChange={(e) => setTaskFormData(prev => ({ ...prev, due_date: e.target.value }))}
+                      className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-1">Prioridade</label>
+                    <select
+                      value={taskFormData.priority}
+                      onChange={(e) => setTaskFormData(prev => ({ ...prev, priority: e.target.value }))}
+                      className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    >
+                      <option value="low">Baixa</option>
+                      <option value="medium">Média</option>
+                      <option value="high">Alta</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-1">Status</label>
+                    <select
+                      value={taskFormData.status}
+                      onChange={(e) => setTaskFormData(prev => ({ ...prev, status: e.target.value }))}
+                      className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    >
+                      <option value="pending">Pendente</option>
+                      <option value="in_progress">Em Progresso</option>
+                      <option value="completed">Concluída</option>
+                    </select>
+                  </div>
+                  
+                  {user?.role === 'admin' && (
+                    <div>
+                      <label className="block text-gray-300 text-sm font-medium mb-1">Advogado Responsável</label>
+                      <select
+                        value={taskFormData.assigned_lawyer_id}
+                        onChange={(e) => setTaskFormData(prev => ({ ...prev, assigned_lawyer_id: e.target.value }))}
+                        className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      >
+                        <option value="">Selecione um advogado...</option>
+                        {lawyers.map(lawyer => (
+                          <option key={lawyer.id} value={lawyer.id}>
+                            {lawyer.full_name} - {lawyer.oab_number}/{lawyer.oab_state}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-1">Cliente (opcional)</label>
+                    <select
+                      value={taskFormData.client_id}
+                      onChange={(e) => setTaskFormData(prev => ({ ...prev, client_id: e.target.value }))}
+                      className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    >
+                      <option value="">Selecione um cliente...</option>
+                      {clients.map(client => (
+                        <option key={client.id} value={client.id}>
+                          {client.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-1">Processo (opcional)</label>
+                    <select
+                      value={taskFormData.process_id}
+                      onChange={(e) => setTaskFormData(prev => ({ ...prev, process_id: e.target.value }))}
+                      className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    >
+                      <option value="">Selecione um processo...</option>
+                      {processes.map(process => (
+                        <option key={process.id} value={process.id}>
+                          {process.process_number} - {process.type}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end space-x-2">
+                  <button
+                    type="button"
+                    onClick={cancelTaskEdit}
+                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {loading ? 'Salvando...' : (editingTask ? 'Atualizar' : 'Criar')}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Tasks Table */}
+        <div className="bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-700">
+              <thead className="bg-gray-900">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Tarefa</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Vencimento</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Prioridade</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Cliente</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="bg-gray-800 divide-y divide-gray-700">
+                {tasks.length > 0 ? (
+                  tasks.map((task) => {
+                    const client = clients.find(c => c.id === task.client_id);
+                    const isOverdue = new Date(task.due_date) < new Date() && task.status !== 'completed';
+                    
+                    return (
+                      <tr key={task.id} className={isOverdue ? 'bg-red-900 bg-opacity-20' : ''}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-white">{task.title}</div>
+                            {task.description && (
+                              <div className="text-sm text-gray-300 truncate max-w-xs">{task.description}</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          <div className={isOverdue ? 'text-red-300 font-semibold' : ''}>
+                            {new Date(task.due_date).toLocaleDateString('pt-BR')}
+                          </div>
+                          {isOverdue && <div className="text-xs text-red-400">Vencida</div>}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(task.priority)}`}>
+                            {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(task.status)}`}>
+                            {task.status === 'completed' ? 'Concluída' : task.status === 'in_progress' ? 'Em Progresso' : 'Pendente'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          {client ? client.name : '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                          <button
+                            onClick={() => editTask(task)}
+                            className="text-orange-400 hover:text-orange-300 transition-colors"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => deleteTask(task.id)}
+                            className="text-red-400 hover:text-red-300 transition-colors"
+                          >
+                            Excluir
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-8 text-center text-gray-400">
+                      Nenhuma tarefa encontrada
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderCurrentPage = () => {
     switch(currentPage) {
       case 'dashboard':
