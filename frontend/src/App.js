@@ -632,6 +632,9 @@ function App() {
                   { key: 'tasks', label: '📋 Tarefas', icon: '' },
                   { key: 'agenda', label: '📅 Agenda', icon: '' }
                 ] : []),
+                ...(user?.role === 'admin' ? [
+                  { key: 'notifications', label: '📱 WhatsApp', icon: '' }
+                ] : []),
                 { key: 'lawyers', label: 'Advogados', icon: '👨‍💼' }
               ].map(item => (
                 <button
