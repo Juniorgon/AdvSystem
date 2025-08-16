@@ -38,6 +38,9 @@ from security import (
     SecurityEvent
 )
 
+# Import WhatsApp Service
+from whatsapp_service import WhatsAppService, PaymentReminderService
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
