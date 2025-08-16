@@ -1675,23 +1675,7 @@ Testemunhas:
 
     const cancelEdit = () => {
       setEditingClient(null);
-      setFormData({
-        name: '',
-        nationality: '',
-        civil_status: '',
-        profession: '',
-        cpf: '',
-        address: {
-          street: '',
-          number: '',
-          city: '',
-          district: '',
-          state: '',
-          complement: ''
-        },
-        phone: '',
-        client_type: 'individual'
-      });
+      resetForm();
       setShowForm(false);
     };
 
