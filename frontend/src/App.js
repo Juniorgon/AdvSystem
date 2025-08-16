@@ -89,6 +89,48 @@ function App() {
     allowedBranches: []
   });
 
+  // Form handling for client creation/editing
+  const [formData, setFormData] = useState({
+    name: '',
+    nationality: '',
+    civil_status: '',
+    profession: '',
+    cpf: '',
+    street: '',
+    number: '',
+    city: '',
+    district: '',
+    state: '',
+    complement: '',
+    phone: '',
+    client_type: 'individual',
+    branch_id: ''
+  });
+
+  const [processForm, setProcessForm] = useState({
+    client_id: '',
+    process_number: '',
+    type: '',
+    status: '',
+    value: 0,
+    description: '',
+    role: 'creditor',
+    responsible_lawyer_id: '',
+    branch_id: ''
+  });
+
+  const [lawyerForm, setLawyerForm] = useState({
+    full_name: '',
+    oab_number: '',
+    oab_state: 'RS',
+    email: '',
+    phone: '',
+    specialization: '',
+    branch_id: '',
+    access_financial_data: true,
+    allowed_branch_ids: []
+  });
+
   // Check authentication on component mount
   useEffect(() => {
     const token = localStorage.getItem('token');
