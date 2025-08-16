@@ -383,7 +383,8 @@ class BackendTester:
         }
         
         try:
-            response = self.session.post(f"{API_BASE_URL}/financial", json=overdue_data)
+            headers = {'Authorization': f'Bearer {self.auth_tokens.get("super_admin")}'} if 'super_admin' in self.auth_tokens else {}
+            response = self.session.post(f"{API_BASE_URL}/financial", json=overdue_data, headers=headers)
             if response.status_code == 200:
                 transaction = response.json()
                 self.created_entities['financial_transactions'].append(transaction['id'])
