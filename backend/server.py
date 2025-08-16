@@ -1414,11 +1414,19 @@ async def get_google_drive_status(current_user: User = Depends(get_current_user)
             detail="Only administrators can check Google Drive status"
         )
     
-    is_configured = google_drive_service.is_configured()
+    # Check if credentials file exists
+    credentials_file = '/app/backend/google_credentials.json'
+    credentials_exist = os.path.exists(credentials_file)
+    
+    is_configured = False
+    if credentials_exist:
+        is_configured = google_drive_service.is_configured()
     
     return {
         "configured": is_configured,
-        "message": "Google Drive is configured and ready" if is_configured else "Google Drive needs to be configured"
+        "credentials_file_exists": credentials_exist,
+        "service_available": True,
+        "message": "Google Drive integration is ready" if is_configured else "Google Drive credentials need to be configured. Please add google_credentials.json file to backend directory."
     }
 
 @api_router.get("/google-drive/auth-url")
