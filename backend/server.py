@@ -1327,7 +1327,14 @@ async def get_my_agenda(current_user: User = Depends(get_current_user), db: Sess
     return [Task.from_orm(task) for task in tasks]
 
 @api_router.put("/tasks/{task_id}", response_model=Task)
-async def update_task(task_id: str, task_update: TaskUpdate, db: Session = Depends(get_db)):
+async def update_task(task_id: str, task_update: TaskUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Only admins can edit tasks
+    if current_user.role != UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Apenas administradores podem editar tarefas"
+        )
+    
     task_db = db.query(DBTask).filter(DBTask.id == task_id).first()
     if not task_db:
         raise HTTPException(status_code=404, detail="Task not found")
