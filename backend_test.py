@@ -963,9 +963,288 @@ class BackendTester:
         
         return self.test_results
     
+    def test_task_management_api(self):
+        """Test Task Management API - New task system functionality"""
+        print("\n=== Testing Task Management API ===")
+        
+        # Ensure we have authentication and lawyers
+        if 'super_admin' not in self.auth_tokens:
+            self.login_super_admin()
+        
+        if not self.created_entities['lawyers']:
+            self.log_test("Task Management Prerequisites", False, "No lawyers available for task testing")
+            return
+        
+        lawyer_id = self.created_entities['lawyers'][0]
+        client_id = self.created_entities['clients'][0] if self.created_entities['clients'] else None
+        process_id = self.created_entities['processes'][0] if self.created_entities['processes'] else None
+        branch_id = self.branch_ids.get('caxias') or "some-branch-id"
+        
+        auth_header = {'Authorization': f'Bearer {self.auth_tokens["super_admin"]}'}
+        
+        # Test 1: Create Task
+        task_data = {
+            "title": "Revisar documentos do processo",
+            "description": "Revisar todos os documentos relacionados ao processo de cobrança",
+            "due_date": (datetime.now() + timedelta(days=7)).isoformat(),
+            "priority": "high",
+            "status": "pending",
+            "assigned_lawyer_id": lawyer_id,
+            "client_id": client_id,
+            "process_id": process_id,
+            "branch_id": branch_id
+        }
+        
+        try:
+            response = self.session.post(f"{API_BASE_URL}/tasks", json=task_data, headers=auth_header)
+            if response.status_code == 200:
+                task = response.json()
+                self.created_entities.setdefault('tasks', []).append(task['id'])
+                self.log_test("Create Task", True, f"Created task: {task['title']}")
+                
+                # Verify task fields
+                required_fields = ['id', 'title', 'due_date', 'priority', 'status', 'assigned_lawyer_id']
+                missing_fields = [field for field in required_fields if field not in task]
+                if missing_fields:
+                    self.log_test("Task Fields Validation", False, f"Missing fields: {missing_fields}")
+                else:
+                    self.log_test("Task Fields Validation", True, "All required task fields present")
+            else:
+                self.log_test("Create Task", False, f"HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_test("Create Task", False, f"Exception: {str(e)}")
+        
+        # Test 2: Get All Tasks
+        try:
+            response = self.session.get(f"{API_BASE_URL}/tasks", headers=auth_header)
+            if response.status_code == 200:
+                tasks = response.json()
+                self.log_test("Get All Tasks", True, f"Retrieved {len(tasks)} tasks")
+            else:
+                self.log_test("Get All Tasks", False, f"HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_test("Get All Tasks", False, f"Exception: {str(e)}")
+        
+        # Test 3: Get Lawyer's Agenda (if lawyer is logged in)
+        if 'test_lawyer' in self.auth_tokens:
+            lawyer_header = {'Authorization': f'Bearer {self.auth_tokens["test_lawyer"]}'}
+            try:
+                response = self.session.get(f"{API_BASE_URL}/tasks/my-agenda", headers=lawyer_header)
+                if response.status_code == 200:
+                    agenda_tasks = response.json()
+                    self.log_test("Get Lawyer Agenda", True, f"Retrieved {len(agenda_tasks)} agenda tasks")
+                else:
+                    self.log_test("Get Lawyer Agenda", False, f"HTTP {response.status_code}", response.text)
+            except Exception as e:
+                self.log_test("Get Lawyer Agenda", False, f"Exception: {str(e)}")
+        
+        # Test 4: Update Task Status
+        if hasattr(self, 'created_entities') and 'tasks' in self.created_entities and self.created_entities['tasks']:
+            task_id = self.created_entities['tasks'][0]
+            update_data = {
+                "status": "in_progress",
+                "priority": "medium"
+            }
+            try:
+                response = self.session.put(f"{API_BASE_URL}/tasks/{task_id}", json=update_data, headers=auth_header)
+                if response.status_code == 200:
+                    updated_task = response.json()
+                    if updated_task['status'] == "in_progress":
+                        self.log_test("Update Task Status", True, "Task status updated successfully")
+                    else:
+                        self.log_test("Update Task Status", False, "Status update not reflected")
+                else:
+                    self.log_test("Update Task Status", False, f"HTTP {response.status_code}", response.text)
+            except Exception as e:
+                self.log_test("Update Task Status", False, f"Exception: {str(e)}")
+    
+    def test_contract_sequential_numbering(self):
+        """Test Contract Sequential Numbering System"""
+        print("\n=== Testing Contract Sequential Numbering ===")
+        
+        if not self.created_entities['clients']:
+            self.log_test("Contract Numbering Prerequisites", False, "No clients available for contract testing")
+            return
+        
+        client_id = self.created_entities['clients'][0]
+        branch_id = self.branch_ids.get('caxias') or client_id
+        
+        # Test 1: Create multiple contracts and verify sequential numbering
+        contract_numbers = []
+        current_year = datetime.now().year
+        
+        for i in range(3):
+            contract_data = {
+                "client_id": client_id,
+                "value": 10000.00 + (i * 1000),
+                "payment_conditions": f"Pagamento em {i+1} parcelas",
+                "installments": i + 1,
+                "branch_id": branch_id
+            }
+            
+            try:
+                response = self.session.post(f"{API_BASE_URL}/contracts", json=contract_data)
+                if response.status_code == 200:
+                    contract = response.json()
+                    self.created_entities['contracts'].append(contract['id'])
+                    contract_numbers.append(contract['contract_number'])
+                    self.log_test(f"Create Contract {i+1}", True, f"Created contract: {contract['contract_number']}")
+                else:
+                    self.log_test(f"Create Contract {i+1}", False, f"HTTP {response.status_code}", response.text)
+            except Exception as e:
+                self.log_test(f"Create Contract {i+1}", False, f"Exception: {str(e)}")
+        
+        # Test 2: Verify sequential numbering pattern
+        if len(contract_numbers) >= 2:
+            # Check if numbers follow CONT-YYYY-NNNN pattern
+            pattern_valid = all(f"CONT-{current_year}-" in num for num in contract_numbers)
+            if pattern_valid:
+                self.log_test("Contract Number Pattern", True, f"All contracts follow CONT-{current_year}-NNNN pattern")
+                
+                # Check if numbers are sequential
+                numbers = []
+                for contract_num in contract_numbers:
+                    try:
+                        # Extract the sequential number part
+                        seq_part = contract_num.split('-')[-1]
+                        numbers.append(int(seq_part))
+                    except:
+                        pass
+                
+                if len(numbers) >= 2:
+                    is_sequential = all(numbers[i] == numbers[i-1] + 1 for i in range(1, len(numbers)))
+                    if is_sequential:
+                        self.log_test("Contract Sequential Numbering", True, f"Contract numbers are sequential: {contract_numbers}")
+                    else:
+                        self.log_test("Contract Sequential Numbering", False, f"Numbers not sequential: {contract_numbers}")
+                else:
+                    self.log_test("Contract Sequential Numbering", False, "Could not extract sequential numbers")
+            else:
+                self.log_test("Contract Number Pattern", False, f"Invalid pattern in contract numbers: {contract_numbers}")
+        else:
+            self.log_test("Contract Sequential Numbering", False, "Not enough contracts created to test sequencing")
+    
+    def test_financial_access_control(self):
+        """Test Financial Access Control based on lawyer permissions"""
+        print("\n=== Testing Financial Access Control ===")
+        
+        # Test with restricted lawyer (access_financial_data=false)
+        if 'restricted_lawyer' in self.auth_tokens:
+            restricted_header = {'Authorization': f'Bearer {self.auth_tokens["restricted_lawyer"]}'}
+            
+            try:
+                response = self.session.get(f"{API_BASE_URL}/financial", headers=restricted_header)
+                if response.status_code == 403:
+                    self.log_test("Restricted Lawyer Financial Access", True, "Correctly blocked access to financial data")
+                else:
+                    self.log_test("Restricted Lawyer Financial Access", False, f"Expected 403, got {response.status_code}")
+            except Exception as e:
+                self.log_test("Restricted Lawyer Financial Access", False, f"Exception: {str(e)}")
+            
+            # Test dashboard access (should show financial data as 0 or restricted)
+            try:
+                response = self.session.get(f"{API_BASE_URL}/dashboard", headers=restricted_header)
+                if response.status_code == 200:
+                    dashboard = response.json()
+                    # For restricted lawyers, financial data should be 0 or restricted
+                    if dashboard.get('total_revenue', 0) == 0 and dashboard.get('total_expenses', 0) == 0:
+                        self.log_test("Restricted Lawyer Dashboard Access", True, "Dashboard shows restricted financial data")
+                    else:
+                        self.log_test("Restricted Lawyer Dashboard Access", False, "Dashboard shows financial data to restricted lawyer")
+                else:
+                    self.log_test("Restricted Lawyer Dashboard Access", False, f"HTTP {response.status_code}", response.text)
+            except Exception as e:
+                self.log_test("Restricted Lawyer Dashboard Access", False, f"Exception: {str(e)}")
+        
+        # Test with lawyer that has financial access
+        if 'test_lawyer' in self.auth_tokens:
+            lawyer_header = {'Authorization': f'Bearer {self.auth_tokens["test_lawyer"]}'}
+            
+            try:
+                response = self.session.get(f"{API_BASE_URL}/financial", headers=lawyer_header)
+                if response.status_code == 200:
+                    self.log_test("Authorized Lawyer Financial Access", True, "Lawyer with financial access can view financial data")
+                else:
+                    self.log_test("Authorized Lawyer Financial Access", False, f"HTTP {response.status_code}", response.text)
+            except Exception as e:
+                self.log_test("Authorized Lawyer Financial Access", False, f"Exception: {str(e)}")
+    
+    def test_process_lawyer_assignment(self):
+        """Test Process Management with responsible_lawyer_id field"""
+        print("\n=== Testing Process Lawyer Assignment ===")
+        
+        if not self.created_entities['clients'] or not self.created_entities['lawyers']:
+            self.log_test("Process Lawyer Assignment Prerequisites", False, "Missing clients or lawyers for testing")
+            return
+        
+        client_id = self.created_entities['clients'][0]
+        lawyer_id = self.created_entities['lawyers'][0]
+        branch_id = self.branch_ids.get('caxias') or client_id
+        
+        # Test 1: Create Process with responsible lawyer
+        process_data = {
+            "client_id": client_id,
+            "process_number": "0001234-56.2024.8.26.0200",
+            "type": "Ação Trabalhista",
+            "status": "Em Andamento",
+            "value": 25000.00,
+            "description": "Ação trabalhista com advogado responsável",
+            "role": "creditor",
+            "branch_id": branch_id,
+            "responsible_lawyer_id": lawyer_id
+        }
+        
+        try:
+            response = self.session.post(f"{API_BASE_URL}/processes", json=process_data)
+            if response.status_code == 200:
+                process = response.json()
+                self.created_entities['processes'].append(process['id'])
+                self.log_test("Create Process with Lawyer Assignment", True, f"Created process with lawyer: {process['id']}")
+                
+                # Verify lawyer assignment
+                if process.get('responsible_lawyer_id') == lawyer_id:
+                    self.log_test("Process Lawyer Assignment Verification", True, "Process correctly assigned to lawyer")
+                else:
+                    self.log_test("Process Lawyer Assignment Verification", False, "Process not correctly assigned to lawyer")
+            else:
+                self.log_test("Create Process with Lawyer Assignment", False, f"HTTP {response.status_code}", response.text)
+        except Exception as e:
+            self.log_test("Create Process with Lawyer Assignment", False, f"Exception: {str(e)}")
+        
+        # Test 2: Test lawyer can only see their assigned processes
+        if 'test_lawyer' in self.auth_tokens:
+            lawyer_header = {'Authorization': f'Bearer {self.auth_tokens["test_lawyer"]}'}
+            
+            try:
+                response = self.session.get(f"{API_BASE_URL}/processes", headers=lawyer_header)
+                if response.status_code == 200:
+                    processes = response.json()
+                    # Check if all processes belong to the lawyer
+                    lawyer_processes = [p for p in processes if p.get('responsible_lawyer_id') == lawyer_id]
+                    if len(lawyer_processes) == len(processes):
+                        self.log_test("Lawyer Process Filtering", True, f"Lawyer sees only assigned processes: {len(processes)}")
+                    else:
+                        self.log_test("Lawyer Process Filtering", False, f"Lawyer sees unassigned processes: {len(processes)} total, {len(lawyer_processes)} assigned")
+                else:
+                    self.log_test("Lawyer Process Filtering", False, f"HTTP {response.status_code}", response.text)
+            except Exception as e:
+                self.log_test("Lawyer Process Filtering", False, f"Exception: {str(e)}")
+
     def cleanup_test_data(self):
         """Clean up created test data"""
         print("\n=== Cleaning Up Test Data ===")
+        
+        # Delete tasks
+        if hasattr(self, 'created_entities') and 'tasks' in self.created_entities:
+            for task_id in self.created_entities['tasks']:
+                try:
+                    response = self.session.delete(f"{API_BASE_URL}/tasks/{task_id}")
+                    if response.status_code == 200:
+                        print(f"✅ Deleted task: {task_id}")
+                    else:
+                        print(f"❌ Failed to delete task {task_id}: {response.status_code}")
+                except Exception as e:
+                    print(f"❌ Exception deleting task {task_id}: {str(e)}")
         
         # Delete contracts
         for contract_id in self.created_entities['contracts']:
