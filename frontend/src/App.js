@@ -628,13 +628,21 @@ function App() {
   useEffect(() => {
     if (isAuthenticated) {
       fetchBranches();
+      
+      // Fetch user permissions immediately after authentication
+      fetchUserPermissions();
+      
+      // Fetch data based on permissions
       fetchDashboardData();
       fetchClients();
       fetchProcesses();
-      fetchFinancialTransactions();
       fetchContracts();
       fetchLawyers();
       fetchTasks();
+      
+      // Only fetch financial data if user might have access
+      // The API will handle the actual permission check
+      fetchFinancialTransactions();
     }
   }, [isAuthenticated]);
 
