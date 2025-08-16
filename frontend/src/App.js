@@ -551,45 +551,7 @@ function App() {
     }
   };
 
-  // Fetch processes
-  const fetchProcesses = async () => {
-    try {
-      const response = await axios.get(`${API}/processes`);
-      setProcesses(response.data);
-    } catch (error) {
-      console.error('Error fetching processes:', error);
-    }
-  };
 
-  // Fetch financial transactions
-  const fetchFinancialTransactions = async () => {
-    try {
-      const response = await axios.get(`${API}/financial`);
-      setFinancialTransactions(response.data);
-    } catch (error) {
-      console.error('Error fetching financial transactions:', error);
-    }
-  };
-
-  // Fetch contracts
-  const fetchContracts = async () => {
-    try {
-      const response = await axios.get(`${API}/contracts`);
-      setContracts(response.data);
-    } catch (error) {
-      console.error('Error fetching contracts:', error);
-    }
-  };
-
-  // Fetch lawyers
-  const fetchLawyers = async () => {
-    try {
-      const response = await axios.get(`${API}/lawyers`);
-      setLawyers(response.data);
-    } catch (error) {
-      console.error('Error fetching lawyers:', error);
-    }
-  };
 
   useEffect(() => {
     if (isAuthenticated) {
