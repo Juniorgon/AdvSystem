@@ -2528,6 +2528,25 @@ Testemunhas:
                     <option value="debtor">Devedor (Réu)</option>
                   </select>
                 </div>
+                
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-1">👨‍💼 Advogado Responsável</label>
+                  <select
+                    value={formData.responsible_lawyer_id}
+                    onChange={(e) => setFormData({...formData, responsible_lawyer_id: e.target.value})}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="">Selecione um advogado (opcional)...</option>
+                    {lawyers.map(lawyer => (
+                      <option key={lawyer.id} value={lawyer.id}>
+                        {lawyer.full_name} - {lawyer.oab_number}/{lawyer.oab_state}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="text-xs text-gray-400 mt-1">
+                    O advogado responsável poderá visualizar e gerenciar este processo
+                  </div>
+                </div>
               </div>
               <div>
                 <label className="block text-gray-300 text-sm font-medium mb-1">Descrição</label>
