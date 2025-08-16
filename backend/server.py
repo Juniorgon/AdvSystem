@@ -376,6 +376,15 @@ class TaskUpdate(BaseModel):
     client_id: Optional[str] = None
     process_id: Optional[str] = None
 
+class WhatsAppMessage(BaseModel):
+    phone_number: str
+    message: str
+
+class WhatsAppReminderRequest(BaseModel):
+    client_id: str
+    message_type: str = "payment_reminder"
+    custom_message: Optional[str] = None
+
 class GoogleDriveAuthRequest(BaseModel):
     authorization_code: str
 
