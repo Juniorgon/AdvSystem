@@ -42,10 +42,51 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # Create the main app without a prefix
-app = FastAPI()
+app = FastAPI(
+    title="Law Firm Management System",
+    description="Sistema de Gestão de Escritório de Advocacia com Segurança Avançada",
+    version="2.0.0"
+)
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
+
+# Enhanced Security Middleware
+@app.middleware("http")
+async def security_middleware(request: Request, call_next):
+    """Enhanced security middleware"""
+    client_ip = request.client.host if request.client else "unknown"
+    
+    # Validate request security
+    if not security_manager.validate_request(request):
+        return Response(
+            content="Rate limit exceeded",
+            status_code=429,
+            headers=SecurityHeaders.get_security_headers()
+        )
+    
+    # Process request
+    response = await call_next(request)
+    
+    # Add security headers to all responses
+    for header, value in SecurityHeaders.get_security_headers().items():
+        response.headers[header] = value
+    
+    # Log security event for sensitive endpoints
+    if request.url.path.startswith("/api/auth") or request.url.path.startswith("/api/admin"):
+        security_manager.log_security_event(SecurityEvent(
+            event_type="SENSITIVE_ENDPOINT_ACCESS",
+            ip_address=client_ip,
+            user_agent=request.headers.get("User-Agent", "Unknown"),
+            timestamp=datetime.utcnow(),
+            details={
+                "endpoint": request.url.path,
+                "method": request.method,
+                "status_code": response.status_code
+            }
+        ))
+    
+    return response
 
 # Authentication configuration
 SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'gb_advocacia_secret_key_2025')
