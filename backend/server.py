@@ -2,7 +2,6 @@ from fastapi import FastAPI, APIRouter, HTTPException, Query, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
@@ -14,57 +13,28 @@ from enum import Enum
 import jwt
 import bcrypt
 import asyncio
-from whatsapp_service import PaymentReminderService, WhatsAppService
-from scheduler import PaymentScheduler
+import json
+from sqlalchemy.orm import Session
+from sqlalchemy import func, extract, and_, or_
 
+# Import database models and connection
+from database import (
+    get_db, create_tables, drop_tables,
+    User as DBUser, Client as DBClient, Process as DBProcess, 
+    FinancialTransaction as DBFinancialTransaction, Contract as DBContract,
+    Lawyer as DBLawyer, Branch as DBBranch, Task as DBTask,
+    ContractNumberSequence as DBContractNumberSequence,
+    UserRole, ClientType, ProcessRole, TransactionType, TransactionStatus
+)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
-
-# Initialize WhatsApp and Scheduler services
-payment_reminder_service = PaymentReminderService(db)
-payment_scheduler = PaymentScheduler(db)
-whatsapp_service = WhatsAppService()
-
 # Create the main app without a prefix
 app = FastAPI()
 
-# Start scheduler on startup
-@app.on_event("startup")
-async def startup_event():
-    payment_scheduler.start()
-    logging.info("PaymentScheduler iniciado")
-
-@app.on_event("shutdown") 
-async def shutdown_event():
-    payment_scheduler.stop()
-    logging.info("PaymentScheduler parado")
-
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
-
-# Enums
-class ClientType(str, Enum):
-    individual = "individual"
-    corporate = "corporate"
-
-class ProcessRole(str, Enum):
-    creditor = "creditor"
-    debtor = "debtor"
-
-class TransactionType(str, Enum):
-    receita = "receita"
-    despesa = "despesa"
-
-class TransactionStatus(str, Enum):
-    pendente = "pendente"
-    pago = "pago"
-    vencido = "vencido"
 
 # Authentication configuration
 SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'gb_advocacia_secret_key_2025')
@@ -73,58 +43,27 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 security = HTTPBearer()
 
-# Enums
-class ClientType(str, Enum):
-    individual = "individual"
-    corporate = "corporate"
-
-class TransactionType(str, Enum):
-    receita = "receita"
-    despesa = "despesa"
-
-class TransactionStatus(str, Enum):
-    pendente = "pendente"
-    pago = "pago"
-    vencido = "vencido"
-
-# Authentication Models
-class UserRole(str, Enum):
-    admin = "admin"
-    lawyer = "lawyer"
-    secretary = "secretary"
-
-# Branch Models
-class Branch(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    name: str
-    cnpj: str
-    address: str
-    phone: str
-    email: str
-    responsible: str  # Nome do responsável
-    is_active: bool = True
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-
-class BranchCreate(BaseModel):
-    name: str
-    cnpj: str
-    address: str
-    phone: str
-    email: str
-    responsible: str
+# Pydantic Models
+class Address(BaseModel):
+    street: str
+    number: str
+    city: str
+    district: str
+    state: str
+    complement: Optional[str] = ""
 
 class User(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    id: str
     username: str
     email: str
     full_name: str
     role: UserRole
-    branch_id: Optional[str] = None  # Vinculação com filial
+    branch_id: Optional[str] = None
     is_active: bool = True
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime
 
-class UserInDB(User):
-    hashed_password: str
+    class Config:
+        from_attributes = True
 
 class UserCreate(BaseModel):
     username: str
@@ -135,13 +74,262 @@ class UserCreate(BaseModel):
     branch_id: Optional[str] = None
 
 class UserLogin(BaseModel):
-    username_or_email: str  # Pode ser username ou email
+    username_or_email: str
     password: str
 
 class Token(BaseModel):
     access_token: str
     token_type: str
     user: User
+
+class Branch(BaseModel):
+    id: str
+    name: str
+    cnpj: str
+    address: str
+    phone: str
+    email: str
+    responsible: str
+    is_active: bool = True
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class BranchCreate(BaseModel):
+    name: str
+    cnpj: str
+    address: str
+    phone: str
+    email: str
+    responsible: str
+
+class Client(BaseModel):
+    id: str
+    name: str
+    nationality: str
+    civil_status: str
+    profession: str
+    cpf: str
+    street: str
+    number: str
+    city: str
+    district: str
+    state: str
+    complement: Optional[str] = ""
+    phone: str
+    client_type: ClientType
+    branch_id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ClientCreate(BaseModel):
+    name: str
+    nationality: str
+    civil_status: str
+    profession: str
+    cpf: str
+    address: Address
+    phone: str
+    client_type: ClientType
+    branch_id: str
+
+class ClientUpdate(BaseModel):
+    name: Optional[str] = None
+    nationality: Optional[str] = None
+    civil_status: Optional[str] = None
+    profession: Optional[str] = None
+    cpf: Optional[str] = None
+    address: Optional[Address] = None
+    phone: Optional[str] = None
+    client_type: Optional[ClientType] = None
+
+class Lawyer(BaseModel):
+    id: str
+    full_name: str
+    oab_number: str
+    oab_state: str
+    email: str
+    phone: str
+    specialization: Optional[str] = ""
+    branch_id: str
+    access_financial_data: bool = True
+    allowed_branch_ids: Optional[str] = None
+    is_active: bool = True
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class LawyerCreate(BaseModel):
+    full_name: str
+    oab_number: str
+    oab_state: str
+    email: str
+    phone: str
+    specialization: Optional[str] = ""
+    branch_id: str
+    access_financial_data: bool = True
+    allowed_branch_ids: Optional[List[str]] = None
+
+class LawyerUpdate(BaseModel):
+    full_name: Optional[str] = None
+    oab_number: Optional[str] = None
+    oab_state: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    specialization: Optional[str] = None
+    access_financial_data: Optional[bool] = None
+    allowed_branch_ids: Optional[List[str]] = None
+
+class Process(BaseModel):
+    id: str
+    client_id: str
+    process_number: str
+    type: str
+    status: str
+    value: float
+    description: str
+    role: ProcessRole
+    branch_id: str
+    responsible_lawyer_id: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ProcessCreate(BaseModel):
+    client_id: str
+    process_number: str
+    type: str
+    status: str
+    value: float
+    description: str
+    role: ProcessRole
+    branch_id: str
+    responsible_lawyer_id: Optional[str] = None
+
+class ProcessUpdate(BaseModel):
+    process_number: Optional[str] = None
+    type: Optional[str] = None
+    status: Optional[str] = None
+    value: Optional[float] = None
+    description: Optional[str] = None
+    role: Optional[ProcessRole] = None
+    responsible_lawyer_id: Optional[str] = None
+
+class FinancialTransaction(BaseModel):
+    id: str
+    client_id: Optional[str] = None
+    process_id: Optional[str] = None
+    type: TransactionType
+    description: str
+    value: float
+    due_date: datetime
+    payment_date: Optional[datetime] = None
+    status: TransactionStatus
+    category: str
+    branch_id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class FinancialTransactionCreate(BaseModel):
+    client_id: Optional[str] = None
+    process_id: Optional[str] = None
+    type: TransactionType
+    description: str
+    value: float
+    due_date: datetime
+    payment_date: Optional[datetime] = None
+    status: TransactionStatus = TransactionStatus.pendente
+    category: str
+    branch_id: str
+
+class FinancialTransactionUpdate(BaseModel):
+    description: Optional[str] = None
+    value: Optional[float] = None
+    due_date: Optional[datetime] = None
+    payment_date: Optional[datetime] = None
+    status: Optional[TransactionStatus] = None
+    category: Optional[str] = None
+
+class Contract(BaseModel):
+    id: str
+    contract_number: str
+    client_id: str
+    process_id: Optional[str] = None
+    value: float
+    payment_conditions: str
+    installments: int
+    branch_id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ContractCreate(BaseModel):
+    client_id: str
+    process_id: Optional[str] = None
+    value: float
+    payment_conditions: str
+    installments: int
+    branch_id: str
+
+class Task(BaseModel):
+    id: str
+    title: str
+    description: Optional[str] = None
+    due_date: datetime
+    priority: str = "medium"
+    status: str = "pending"
+    assigned_lawyer_id: str
+    client_id: Optional[str] = None
+    process_id: Optional[str] = None
+    branch_id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class TaskCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    due_date: datetime
+    priority: str = "medium"
+    status: str = "pending"
+    assigned_lawyer_id: str
+    client_id: Optional[str] = None
+    process_id: Optional[str] = None
+    branch_id: str
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    due_date: Optional[datetime] = None
+    priority: Optional[str] = None
+    status: Optional[str] = None
+    assigned_lawyer_id: Optional[str] = None
+    client_id: Optional[str] = None
+    process_id: Optional[str] = None
+
+class DashboardStats(BaseModel):
+    total_clients: int
+    total_processes: int
+    total_revenue: float
+    total_expenses: float
+    pending_payments: int
+    overdue_payments: int
+    monthly_revenue: float
+    monthly_expenses: float
 
 # Password hashing utilities
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -160,7 +348,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User:
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -175,248 +363,142 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     except jwt.PyJWTError:
         raise credentials_exception
     
-    # Try to find in users first
-    user_doc = await db.users.find_one({
-        "$or": [
-            {"username": username_or_email},
-            {"email": username_or_email}
-        ]
-    })
-    if user_doc:
-        return User(**user_doc)
+    # Try to find user
+    user_db = db.query(DBUser).filter(
+        or_(DBUser.username == username_or_email, DBUser.email == username_or_email)
+    ).first()
+    
+    if user_db:
+        return User.from_orm(user_db)
     
     # Try to find in lawyers (for lawyer authentication)
-    lawyer_doc = await db.lawyers.find_one({"email": username_or_email})
-    if lawyer_doc:
+    lawyer_db = db.query(DBLawyer).filter(DBLawyer.email == username_or_email).first()
+    if lawyer_db:
         # Create user object from lawyer data
         user_dict = {
-            "id": lawyer_doc['id'],
-            "username": lawyer_doc['email'],
-            "email": lawyer_doc['email'],
-            "full_name": lawyer_doc['full_name'],
+            "id": lawyer_db.id,
+            "username": lawyer_db.email,
+            "email": lawyer_db.email,
+            "full_name": lawyer_db.full_name,
             "role": UserRole.lawyer,
-            "branch_id": lawyer_doc['branch_id'],
-            "is_active": lawyer_doc['is_active'],
-            "created_at": lawyer_doc['created_at']
+            "branch_id": lawyer_db.branch_id,
+            "is_active": lawyer_db.is_active,
+            "created_at": lawyer_db.created_at
         }
         return User(**user_dict)
     
     raise credentials_exception
 
-# Models
-class Address(BaseModel):
-    street: str
-    number: str
-    city: str
-    district: str
-    state: str
-    complement: Optional[str] = ""
+def get_next_contract_number(branch_id: str, db: Session) -> str:
+    current_year = datetime.now().year
+    
+    # Get or create sequence for this branch and year
+    sequence = db.query(DBContractNumberSequence).filter(
+        DBContractNumberSequence.branch_id == branch_id,
+        DBContractNumberSequence.year == current_year
+    ).first()
+    
+    if not sequence:
+        sequence = DBContractNumberSequence(
+            branch_id=branch_id,
+            year=current_year,
+            last_number=0
+        )
+        db.add(sequence)
+        db.flush()
+    
+    sequence.last_number += 1
+    db.commit()
+    
+    return f"CONT-{current_year}-{sequence.last_number:04d}"
 
-class Client(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    name: str
-    nationality: str
-    civil_status: str
-    profession: str
-    cpf: str
-    address: Address
-    phone: str
-    client_type: ClientType
-    branch_id: str  # Vinculação obrigatória com filial
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+def check_financial_access(current_user: User, db: Session) -> bool:
+    """Check if user has access to financial data"""
+    if current_user.role == UserRole.admin:
+        return True
+    
+    if current_user.role == UserRole.lawyer:
+        lawyer = db.query(DBLawyer).filter(DBLawyer.email == current_user.email).first()
+        if lawyer:
+            return lawyer.access_financial_data
+    
+    return False
 
-class ClientCreate(BaseModel):
-    name: str
-    nationality: str
-    civil_status: str
-    profession: str
-    cpf: str
-    address: Address
-    phone: str
-    client_type: ClientType
-    branch_id: str  # Vinculação obrigatória com filial
-
-class ClientUpdate(BaseModel):
-    name: Optional[str] = None
-    nationality: Optional[str] = None
-    civil_status: Optional[str] = None
-    profession: Optional[str] = None
-    cpf: Optional[str] = None
-    address: Optional[Address] = None
-    phone: Optional[str] = None
-    client_type: Optional[ClientType] = None
-
-class Process(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_id: str
-    process_number: str
-    type: str
-    status: str
-    value: float
-    description: str
-    role: ProcessRole
-    branch_id: str  # Vinculação obrigatória com filial
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
-
-class ProcessCreate(BaseModel):
-    client_id: str
-    process_number: str
-    type: str
-    status: str
-    value: float
-    description: str
-    role: ProcessRole
-    branch_id: str  # Vinculação obrigatória com filial
-
-class ProcessUpdate(BaseModel):
-    process_number: Optional[str] = None
-    type: Optional[str] = None
-    status: Optional[str] = None
-    value: Optional[float] = None
-    description: Optional[str] = None
-    role: Optional[ProcessRole] = None
-
-class FinancialTransaction(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_id: Optional[str] = None
-    process_id: Optional[str] = None
-    type: TransactionType
-    description: str
-    value: float
-    due_date: datetime
-    payment_date: Optional[datetime] = None
-    status: TransactionStatus
-    category: str
-    branch_id: str  # Vinculação obrigatória com filial
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
-
-class FinancialTransactionCreate(BaseModel):
-    client_id: Optional[str] = None
-    process_id: Optional[str] = None
-    type: TransactionType
-    description: str
-    value: float
-    due_date: datetime
-    payment_date: Optional[datetime] = None
-    status: TransactionStatus = TransactionStatus.pendente
-    category: str
-    branch_id: str  # Vinculação obrigatória com filial
-
-class FinancialTransactionUpdate(BaseModel):
-    description: Optional[str] = None
-    value: Optional[float] = None
-    due_date: Optional[datetime] = None
-    payment_date: Optional[datetime] = None
-    status: Optional[TransactionStatus] = None
-    category: Optional[str] = None
-
-class Contract(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_id: str
-    process_id: Optional[str] = None
-    value: float
-    payment_conditions: str
-    installments: int
-    branch_id: str  # Vinculação obrigatória com filial
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
-
-class ContractCreate(BaseModel):
-    client_id: str
-    process_id: Optional[str] = None
-    value: float
-    payment_conditions: str
-    installments: int
-    branch_id: str  # Vinculação obrigatória com filial
-
-class Lawyer(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    full_name: str
-    oab_number: str
-    oab_state: str  # Estado da OAB (SP, RJ, MG, etc.)
-    email: str
-    phone: str
-    specialization: Optional[str] = ""
-    branch_id: str  # Vinculação obrigatória com filial
-    is_active: bool = True
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
-
-class LawyerCreate(BaseModel):
-    full_name: str
-    oab_number: str
-    oab_state: str
-    email: str
-    phone: str
-    specialization: Optional[str] = ""
-    branch_id: str  # Vinculação obrigatória com filial
-
-class DashboardStats(BaseModel):
-    total_clients: int
-    total_processes: int
-    total_revenue: float
-    total_expenses: float
-    pending_payments: int
-    overdue_payments: int
-    monthly_revenue: float
-    monthly_expenses: float
+def get_accessible_branches(current_user: User, db: Session) -> List[str]:
+    """Get list of branch IDs the user has access to"""
+    if current_user.role == UserRole.admin and not current_user.branch_id:
+        # Super admin has access to all branches
+        return []  # Empty list means all branches
+    
+    if current_user.role == UserRole.lawyer:
+        lawyer = db.query(DBLawyer).filter(DBLawyer.email == current_user.email).first()
+        if lawyer and lawyer.allowed_branch_ids:
+            try:
+                return json.loads(lawyer.allowed_branch_ids)
+            except:
+                pass
+    
+    # Default: only own branch
+    return [current_user.branch_id] if current_user.branch_id else []
 
 # Authentication endpoints
 @api_router.post("/auth/register", response_model=User)
-async def register_user(user: UserCreate):
+async def register_user(user: UserCreate, db: Session = Depends(get_db)):
     # Check if user already exists
-    existing_user = await db.users.find_one({"username": user.username})
+    existing_user = db.query(DBUser).filter(DBUser.username == user.username).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Username already registered")
     
-    existing_email = await db.users.find_one({"email": user.email})
+    existing_email = db.query(DBUser).filter(DBUser.email == user.email).first()
     if existing_email:
         raise HTTPException(status_code=400, detail="Email already registered")
     
     # Create new user
     hashed_password = get_password_hash(user.password)
-    user_dict = user.dict()
-    del user_dict['password']
     
-    user_in_db = UserInDB(**user_dict, hashed_password=hashed_password)
-    await db.users.insert_one(user_in_db.dict())
+    user_db = DBUser(
+        username=user.username,
+        email=user.email,
+        full_name=user.full_name,
+        hashed_password=hashed_password,
+        role=user.role,
+        branch_id=user.branch_id
+    )
     
-    return User(**user_dict)
+    db.add(user_db)
+    db.commit()
+    db.refresh(user_db)
+    
+    return User.from_orm(user_db)
 
 @api_router.post("/auth/login", response_model=Token)
-async def login_user(user_credentials: UserLogin):
+async def login_user(user_credentials: UserLogin, db: Session = Depends(get_db)):
     # Try to find user by username or email
-    user_doc = await db.users.find_one({
-        "$or": [
-            {"username": user_credentials.username_or_email},
-            {"email": user_credentials.username_or_email}
-        ]
-    })
+    user_db = db.query(DBUser).filter(
+        or_(DBUser.username == user_credentials.username_or_email, 
+            DBUser.email == user_credentials.username_or_email)
+    ).first()
     
-    # If not found in users, try to find in lawyers collection for lawyer login
-    if not user_doc:
-        lawyer_doc = await db.lawyers.find_one({"email": user_credentials.username_or_email})
-        if lawyer_doc:
+    # If not found in users, try lawyers
+    if not user_db:
+        lawyer_db = db.query(DBLawyer).filter(DBLawyer.email == user_credentials.username_or_email).first()
+        if lawyer_db:
             # Verify password is the OAB number
-            if user_credentials.password == lawyer_doc['oab_number']:
-                # Create temporary user object for lawyer
+            if user_credentials.password == lawyer_db.oab_number:
                 user_dict = {
-                    "id": lawyer_doc['id'],
-                    "username": lawyer_doc['email'],
-                    "email": lawyer_doc['email'],
-                    "full_name": lawyer_doc['full_name'],
-                    "role": "lawyer",
-                    "branch_id": lawyer_doc['branch_id'],
-                    "is_active": lawyer_doc['is_active'],
-                    "created_at": lawyer_doc['created_at']
+                    "id": lawyer_db.id,
+                    "username": lawyer_db.email,
+                    "email": lawyer_db.email,
+                    "full_name": lawyer_db.full_name,
+                    "role": UserRole.lawyer,
+                    "branch_id": lawyer_db.branch_id,
+                    "is_active": lawyer_db.is_active,
+                    "created_at": lawyer_db.created_at
                 }
                 
                 access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
                 access_token = create_access_token(
-                    data={"sub": lawyer_doc['email']}, expires_delta=access_token_expires
+                    data={"sub": lawyer_db.email}, expires_delta=access_token_expires
                 )
                 
                 user = User(**user_dict)
@@ -427,79 +509,36 @@ async def login_user(user_credentials: UserLogin):
                     detail="Para advogados, use seu email e os números da sua OAB como senha",
                 )
     
-    if not user_doc:
+    if not user_db:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Usuário não encontrado",
         )
     
-    user_in_db = UserInDB(**user_doc)
-    if not verify_password(user_credentials.password, user_in_db.hashed_password):
+    if not verify_password(user_credentials.password, user_db.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Senha incorreta",
         )
     
-    if not user_in_db.is_active:
+    if not user_db.is_active:
         raise HTTPException(status_code=400, detail="Usuário inativo")
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user_in_db.username}, expires_delta=access_token_expires
+        data={"sub": user_db.username}, expires_delta=access_token_expires
     )
     
-    user = User(**{k: v for k, v in user_in_db.dict().items() if k != 'hashed_password'})
+    user = User.from_orm(user_db)
     return Token(access_token=access_token, token_type="bearer", user=user)
 
 @api_router.get("/auth/me", response_model=User)
 async def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
 
-@api_router.get("/auth/users", response_model=List[User])
-async def get_all_users(current_user: User = Depends(get_current_user)):
-    if current_user.role != UserRole.admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions"
-        )
-    
-    users_cursor = db.users.find()
-    users = []
-    async for user_doc in users_cursor:
-        user = User(**{k: v for k, v in user_doc.items() if k != 'hashed_password'})
-        users.append(user)
-    
-    return users
-
-@api_router.post("/auth/create-admin")
-async def create_admin_user():
-    # Check if admin already exists
-    existing_admin = await db.users.find_one({"role": "admin"})
-    if existing_admin:
-        raise HTTPException(status_code=400, detail="Admin user already exists")
-    
-    # Create default admin user
-    admin_user = UserCreate(
-        username="admin",
-        email="admin@gbadvocacia.com",
-        full_name="Administrador GB Advocacia",
-        password="admin123",
-        role=UserRole.admin
-    )
-    
-    hashed_password = get_password_hash(admin_user.password)
-    user_dict = admin_user.dict()
-    del user_dict['password']
-    
-    user_in_db = UserInDB(**user_dict, hashed_password=hashed_password)
-    await db.users.insert_one(user_in_db.dict())
-    
-    return {"message": "Admin user created successfully", "username": "admin", "password": "admin123"}
-
 # Branch endpoints
 @api_router.post("/branches", response_model=Branch)
-async def create_branch(branch: BranchCreate, current_user: User = Depends(get_current_user)):
-    # Only admin can create branches
+async def create_branch(branch: BranchCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if current_user.role != UserRole.admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -507,338 +546,119 @@ async def create_branch(branch: BranchCreate, current_user: User = Depends(get_c
         )
     
     # Check if CNPJ already exists
-    existing_branch = await db.branches.find_one({"cnpj": branch.cnpj})
+    existing_branch = db.query(DBBranch).filter(DBBranch.cnpj == branch.cnpj).first()
     if existing_branch:
         raise HTTPException(status_code=400, detail="Branch with this CNPJ already exists")
     
-    branch_dict = branch.dict()
-    branch_obj = Branch(**branch_dict)
-    await db.branches.insert_one(branch_obj.dict())
-    return branch_obj
+    branch_db = DBBranch(**branch.dict())
+    db.add(branch_db)
+    db.commit()
+    db.refresh(branch_db)
+    
+    return Branch.from_orm(branch_db)
 
 @api_router.get("/branches", response_model=List[Branch])
-async def get_branches(current_user: User = Depends(get_current_user)):
-    # Super admin can see all branches, regular admin/lawyer can only see their own
-    if current_user.role == UserRole.admin and not current_user.branch_id:
-        # Super admin without branch_id can see all
-        branches = await db.branches.find({"is_active": True}).to_list(1000)
-    elif current_user.branch_id:
-        # User with branch_id can only see their branch
-        branches = await db.branches.find({
-            "id": current_user.branch_id, 
-            "is_active": True
-        }).to_list(1000)
-    else:
-        # Default: see all active branches
-        branches = await db.branches.find({"is_active": True}).to_list(1000)
+async def get_branches(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    accessible_branches = get_accessible_branches(current_user, db)
     
-    return [Branch(**branch) for branch in branches]
-
-@api_router.get("/branches/{branch_id}", response_model=Branch)
-async def get_branch(branch_id: str, current_user: User = Depends(get_current_user)):
-    branch = await db.branches.find_one({"id": branch_id})
-    if branch is None:
-        raise HTTPException(status_code=404, detail="Branch not found")
-    return Branch(**branch)
-
-@api_router.put("/branches/{branch_id}", response_model=Branch)
-async def update_branch(
-    branch_id: str, 
-    branch: BranchCreate, 
-    current_user: User = Depends(get_current_user)
-):
-    # Only admin can update branches
-    if current_user.role != UserRole.admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only administrators can update branches"
-        )
+    query = db.query(DBBranch).filter(DBBranch.is_active == True)
     
-    existing_branch = await db.branches.find_one({"id": branch_id})
-    if existing_branch is None:
-        raise HTTPException(status_code=404, detail="Branch not found")
+    if accessible_branches:  # If not empty, filter by accessible branches
+        query = query.filter(DBBranch.id.in_(accessible_branches))
     
-    # Check if CNPJ conflicts with other branches
-    cnpj_conflict = await db.branches.find_one({
-        "cnpj": branch.cnpj,
-        "id": {"$ne": branch_id}
-    })
-    if cnpj_conflict:
-        raise HTTPException(status_code=400, detail="Another branch with this CNPJ already exists")
-    
-    update_data = branch.dict()
-    update_data["updated_at"] = datetime.utcnow()
-    
-    await db.branches.update_one({"id": branch_id}, {"$set": update_data})
-    updated_branch = await db.branches.find_one({"id": branch_id})
-    return Branch(**updated_branch)
+    branches = query.all()
+    return [Branch.from_orm(branch) for branch in branches]
 
 # Client endpoints
 @api_router.post("/clients", response_model=Client)
-async def create_client(client: ClientCreate):
-    client_dict = client.dict()
-    client_obj = Client(**client_dict)
-    await db.clients.insert_one(client_obj.dict())
-    return client_obj
+async def create_client(client: ClientCreate, db: Session = Depends(get_db)):
+    client_data = client.dict()
+    # Extract address
+    address = client_data.pop('address')
+    client_data.update(address)
+    
+    client_db = DBClient(**client_data)
+    db.add(client_db)
+    db.commit()
+    db.refresh(client_db)
+    
+    return Client.from_orm(client_db)
 
 @api_router.get("/clients", response_model=List[Client])
-async def get_clients(current_user: User = Depends(get_current_user)):
-    # Apply branch filter based on user's branch_id
-    query = {}
-    if current_user.branch_id:
-        # User is restricted to their branch
-        query["branch_id"] = current_user.branch_id
-    elif current_user.role != UserRole.admin or current_user.branch_id is not None:
-        # Non-admin users or branch-restricted admins can only see their branch data
-        return []
-    # Super admin (role=admin, branch_id=None) can see all clients
+async def get_clients(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    accessible_branches = get_accessible_branches(current_user, db)
     
-    clients = await db.clients.find(query).to_list(1000)
-    return [Client(**client) for client in clients]
+    query = db.query(DBClient)
+    
+    if accessible_branches:
+        query = query.filter(DBClient.branch_id.in_(accessible_branches))
+    
+    clients = query.all()
+    return [Client.from_orm(client) for client in clients]
 
 @api_router.get("/clients/{client_id}", response_model=Client)
-async def get_client(client_id: str):
-    client = await db.clients.find_one({"id": client_id})
+async def get_client(client_id: str, db: Session = Depends(get_db)):
+    client = db.query(DBClient).filter(DBClient.id == client_id).first()
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
-    return Client(**client)
+    return Client.from_orm(client)
+
+@api_router.put("/clients/{client_id}", response_model=Client)
+async def update_client(client_id: str, client_update: ClientUpdate, db: Session = Depends(get_db)):
+    client_db = db.query(DBClient).filter(DBClient.id == client_id).first()
+    if not client_db:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    update_data = client_update.dict(exclude_unset=True)
+    if 'address' in update_data:
+        address = update_data.pop('address')
+        update_data.update(address)
+    
+    for field, value in update_data.items():
+        setattr(client_db, field, value)
+    
+    client_db.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(client_db)
+    
+    return Client.from_orm(client_db)
 
 @api_router.delete("/clients/{client_id}")
-async def delete_client(client_id: str):
-    # Check if client exists
-    client = await db.clients.find_one({"id": client_id})
-    if client is None:
+async def delete_client(client_id: str, db: Session = Depends(get_db)):
+    client = db.query(DBClient).filter(DBClient.id == client_id).first()
+    if not client:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
     
-    # Check for dependencies
+    # Check dependencies
     dependencies = []
     
-    # Check for processes
-    processes_count = await db.processes.count_documents({"client_id": client_id})
+    processes_count = db.query(DBProcess).filter(DBProcess.client_id == client_id).count()
     if processes_count > 0:
         dependencies.append(f"{processes_count} processo(s)")
     
-    # Check for contracts
-    contracts_count = await db.contracts.count_documents({"client_id": client_id})
+    contracts_count = db.query(DBContract).filter(DBContract.client_id == client_id).count()
     if contracts_count > 0:
         dependencies.append(f"{contracts_count} contrato(s)")
     
-    # Check for financial transactions
-    financial_count = await db.financial_transactions.count_documents({"client_id": client_id})
+    financial_count = db.query(DBFinancialTransaction).filter(DBFinancialTransaction.client_id == client_id).count()
     if financial_count > 0:
         dependencies.append(f"{financial_count} transação(ões) financeira(s)")
     
     if dependencies:
         dependency_text = ", ".join(dependencies)
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail=f"Não é possível excluir este cliente pois ele possui: {dependency_text}. Remova essas dependências primeiro."
         )
     
-    # If no dependencies, delete the client
-    result = await db.clients.delete_one({"id": client_id})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Cliente não encontrado")
+    db.delete(client)
+    db.commit()
     
     return {"message": "Cliente excluído com sucesso"}
 
-@api_router.put("/clients/{client_id}", response_model=Client)
-async def update_client(client_id: str, client_update: ClientUpdate):
-    existing_client = await db.clients.find_one({"id": client_id})
-    if not existing_client:
-        raise HTTPException(status_code=404, detail="Client not found")
-    
-    update_data = client_update.dict(exclude_unset=True)
-    update_data["updated_at"] = datetime.utcnow()
-    
-    await db.clients.update_one({"id": client_id}, {"$set": update_data})
-    
-    updated_client = await db.clients.find_one({"id": client_id})
-    return Client(**updated_client)
-
-@api_router.delete("/clients/{client_id}")
-async def delete_client(client_id: str):
-    result = await db.clients.delete_one({"id": client_id})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Client not found")
-    return {"message": "Client deleted successfully"}
-
-# Process endpoints
-@api_router.post("/processes", response_model=Process)
-async def create_process(process: ProcessCreate):
-    # Verify client exists
-    client = await db.clients.find_one({"id": process.client_id})
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
-    
-    process_dict = process.dict()
-    process_obj = Process(**process_dict)
-    await db.processes.insert_one(process_obj.dict())
-    return process_obj
-
-@api_router.get("/processes", response_model=List[Process])
-async def get_processes(current_user: User = Depends(get_current_user)):
-    # Apply branch filter
-    query = {}
-    if current_user.branch_id:
-        query["branch_id"] = current_user.branch_id
-    elif current_user.role != UserRole.admin or current_user.branch_id is not None:
-        return []
-    
-    processes = await db.processes.find(query).to_list(1000)
-    return [Process(**process) for process in processes]
-
-@api_router.get("/processes/{process_id}", response_model=Process)
-async def get_process(process_id: str):
-    process = await db.processes.find_one({"id": process_id})
-    if not process:
-        raise HTTPException(status_code=404, detail="Process not found")
-    return Process(**process)
-
-@api_router.get("/clients/{client_id}/processes", response_model=List[Process])
-async def get_client_processes(client_id: str):
-    processes = await db.processes.find({"client_id": client_id}).to_list(1000)
-    return [Process(**process) for process in processes]
-
-@api_router.put("/processes/{process_id}", response_model=Process)
-async def update_process(process_id: str, process_update: ProcessUpdate):
-    existing_process = await db.processes.find_one({"id": process_id})
-    if not existing_process:
-        raise HTTPException(status_code=404, detail="Process not found")
-    
-    update_data = process_update.dict(exclude_unset=True)
-    update_data["updated_at"] = datetime.utcnow()
-    
-    await db.processes.update_one({"id": process_id}, {"$set": update_data})
-    
-    updated_process = await db.processes.find_one({"id": process_id})
-    return Process(**updated_process)
-
-@api_router.delete("/processes/{process_id}")
-async def delete_process(process_id: str):
-    # Check if process exists
-    process = await db.processes.find_one({"id": process_id})
-    if process is None:
-        raise HTTPException(status_code=404, detail="Processo não encontrado")
-    
-    # Check for dependencies (financial transactions)
-    financial_count = await db.financial_transactions.count_documents({"process_id": process_id})
-    if financial_count > 0:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Não é possível excluir este processo pois ele possui {financial_count} transação(ões) financeira(s) vinculada(s). Remova essas transações primeiro."
-        )
-    
-    # If no dependencies, delete the process
-    result = await db.processes.delete_one({"id": process_id})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Processo não encontrado")
-    
-    return {"message": "Processo excluído com sucesso"}
-
-# Financial Transaction endpoints
-@api_router.post("/financial", response_model=FinancialTransaction)
-async def create_financial_transaction(transaction: FinancialTransactionCreate):
-    transaction_dict = transaction.dict()
-    transaction_obj = FinancialTransaction(**transaction_dict)
-    await db.financial_transactions.insert_one(transaction_obj.dict())
-    return transaction_obj
-
-@api_router.get("/financial", response_model=List[FinancialTransaction])
-async def get_financial_transactions(current_user: User = Depends(get_current_user)):
-    # Apply branch filter
-    query = {}
-    if current_user.branch_id:
-        query["branch_id"] = current_user.branch_id
-    elif current_user.role != UserRole.admin or current_user.branch_id is not None:
-        return []
-    
-    transactions = await db.financial_transactions.find(query).to_list(1000)
-    return [FinancialTransaction(**transaction) for transaction in transactions]
-
-@api_router.get("/financial/{transaction_id}", response_model=FinancialTransaction)
-async def get_financial_transaction(transaction_id: str):
-    transaction = await db.financial_transactions.find_one({"id": transaction_id})
-    if not transaction:
-        raise HTTPException(status_code=404, detail="Transaction not found")
-    return FinancialTransaction(**transaction)
-
-@api_router.put("/financial/{transaction_id}", response_model=FinancialTransaction)
-async def update_financial_transaction(transaction_id: str, transaction_update: FinancialTransactionUpdate):
-    existing_transaction = await db.financial_transactions.find_one({"id": transaction_id})
-    if not existing_transaction:
-        raise HTTPException(status_code=404, detail="Transaction not found")
-    
-    update_data = transaction_update.dict(exclude_unset=True)
-    update_data["updated_at"] = datetime.utcnow()
-    
-    await db.financial_transactions.update_one({"id": transaction_id}, {"$set": update_data})
-    
-    updated_transaction = await db.financial_transactions.find_one({"id": transaction_id})
-    return FinancialTransaction(**updated_transaction)
-
-@api_router.delete("/financial/{transaction_id}")
-async def delete_financial_transaction(transaction_id: str):
-    # Check if transaction exists
-    transaction = await db.financial_transactions.find_one({"id": transaction_id})
-    if transaction is None:
-        raise HTTPException(status_code=404, detail="Transação financeira não encontrada")
-    
-    # Check if transaction is already paid
-    if transaction.get("status") == "pago":
-        raise HTTPException(
-            status_code=400,
-            detail="Não é possível excluir uma transação que já foi paga. Para reverter, altere o status primeiro."
-        )
-    
-    # If no restrictions, delete the transaction
-    result = await db.financial_transactions.delete_one({"id": transaction_id})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Transação financeira não encontrada")
-    
-    return {"message": "Transação financeira excluída com sucesso"}
-
-# Contract endpoints
-@api_router.post("/contracts", response_model=Contract)
-async def create_contract(contract: ContractCreate):
-    # Verify client exists
-    client = await db.clients.find_one({"id": contract.client_id})
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
-    
-    contract_dict = contract.dict()
-    contract_obj = Contract(**contract_dict)
-    await db.contracts.insert_one(contract_obj.dict())
-    return contract_obj
-
-@api_router.get("/contracts", response_model=List[Contract])
-async def get_contracts(current_user: User = Depends(get_current_user)):
-    # Apply branch filter
-    query = {}
-    if current_user.branch_id:
-        query["branch_id"] = current_user.branch_id
-    elif current_user.role != UserRole.admin or current_user.branch_id is not None:
-        return []
-    
-    contracts = await db.contracts.find(query).to_list(1000)
-    return [Contract(**contract) for contract in contracts]
-
-@api_router.get("/contracts/{contract_id}", response_model=Contract)
-async def get_contract(contract_id: str):
-    contract = await db.contracts.find_one({"id": contract_id})
-    if not contract:
-        raise HTTPException(status_code=404, detail="Contract not found")
-    return Contract(**contract)
-
-@api_router.get("/clients/{client_id}/contracts", response_model=List[Contract])
-async def get_client_contracts(client_id: str):
-    contracts = await db.contracts.find({"client_id": client_id}).to_list(1000)
-    return [Contract(**contract) for contract in contracts]
-
-# Lawyer endpoints (Admin only)
+# Lawyer endpoints
 @api_router.post("/lawyers", response_model=Lawyer)
-async def create_lawyer(lawyer: LawyerCreate, current_user: User = Depends(get_current_user)):
-    # Only admin can create lawyers
+async def create_lawyer(lawyer: LawyerCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if current_user.role != UserRole.admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -846,174 +666,442 @@ async def create_lawyer(lawyer: LawyerCreate, current_user: User = Depends(get_c
         )
     
     # Check if OAB number already exists
-    existing_lawyer = await db.lawyers.find_one({
-        "oab_number": lawyer.oab_number, 
-        "oab_state": lawyer.oab_state
-    })
+    existing_lawyer = db.query(DBLawyer).filter(
+        DBLawyer.oab_number == lawyer.oab_number,
+        DBLawyer.oab_state == lawyer.oab_state
+    ).first()
     if existing_lawyer:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail=f"Lawyer with OAB {lawyer.oab_number}/{lawyer.oab_state} already exists"
         )
     
     # Check if email already exists
-    existing_email = await db.lawyers.find_one({"email": lawyer.email})
+    existing_email = db.query(DBLawyer).filter(DBLawyer.email == lawyer.email).first()
     if existing_email:
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    lawyer_dict = lawyer.dict()
-    lawyer_obj = Lawyer(**lawyer_dict)
-    await db.lawyers.insert_one(lawyer_obj.dict())
-    return lawyer_obj
+    lawyer_data = lawyer.dict()
+    if lawyer.allowed_branch_ids:
+        lawyer_data['allowed_branch_ids'] = json.dumps(lawyer.allowed_branch_ids)
+    
+    lawyer_db = DBLawyer(**lawyer_data)
+    db.add(lawyer_db)
+    db.commit()
+    db.refresh(lawyer_db)
+    
+    return Lawyer.from_orm(lawyer_db)
 
 @api_router.get("/lawyers", response_model=List[Lawyer])
-async def get_lawyers(current_user: User = Depends(get_current_user)):
-    # Apply branch filter
-    query = {"is_active": True}
-    if current_user.branch_id:
-        query["branch_id"] = current_user.branch_id
-    elif current_user.role != UserRole.admin or current_user.branch_id is not None:
-        return []
+async def get_lawyers(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    accessible_branches = get_accessible_branches(current_user, db)
     
-    lawyers = await db.lawyers.find(query).to_list(1000)
-    return [Lawyer(**lawyer) for lawyer in lawyers]
-
-@api_router.get("/lawyers/{lawyer_id}", response_model=Lawyer)
-async def get_lawyer(lawyer_id: str, current_user: User = Depends(get_current_user)):
-    lawyer = await db.lawyers.find_one({"id": lawyer_id})
-    if lawyer is None:
-        raise HTTPException(status_code=404, detail="Lawyer not found")
-    return Lawyer(**lawyer)
+    query = db.query(DBLawyer).filter(DBLawyer.is_active == True)
+    
+    if accessible_branches:
+        query = query.filter(DBLawyer.branch_id.in_(accessible_branches))
+    
+    lawyers = query.all()
+    return [Lawyer.from_orm(lawyer) for lawyer in lawyers]
 
 @api_router.put("/lawyers/{lawyer_id}", response_model=Lawyer)
 async def update_lawyer(
-    lawyer_id: str, 
-    lawyer: LawyerCreate, 
-    current_user: User = Depends(get_current_user)
+    lawyer_id: str,
+    lawyer: LawyerUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    # Only admin can update lawyers
     if current_user.role != UserRole.admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only administrators can update lawyers"
         )
     
-    existing_lawyer = await db.lawyers.find_one({"id": lawyer_id})
-    if existing_lawyer is None:
+    lawyer_db = db.query(DBLawyer).filter(DBLawyer.id == lawyer_id).first()
+    if not lawyer_db:
         raise HTTPException(status_code=404, detail="Lawyer not found")
     
-    # Check if OAB number conflicts with other lawyers (excluding current one)
-    oab_conflict = await db.lawyers.find_one({
-        "oab_number": lawyer.oab_number,
-        "oab_state": lawyer.oab_state,
-        "id": {"$ne": lawyer_id}
-    })
-    if oab_conflict:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Another lawyer with OAB {lawyer.oab_number}/{lawyer.oab_state} already exists"
-        )
+    update_data = lawyer.dict(exclude_unset=True)
+    if 'allowed_branch_ids' in update_data and update_data['allowed_branch_ids']:
+        update_data['allowed_branch_ids'] = json.dumps(update_data['allowed_branch_ids'])
     
-    # Check if email conflicts with other lawyers (excluding current one)
-    email_conflict = await db.lawyers.find_one({
-        "email": lawyer.email,
-        "id": {"$ne": lawyer_id}
-    })
-    if email_conflict:
-        raise HTTPException(status_code=400, detail="Email already registered by another lawyer")
+    for field, value in update_data.items():
+        setattr(lawyer_db, field, value)
     
-    update_data = lawyer.dict()
-    update_data["updated_at"] = datetime.utcnow()
+    lawyer_db.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(lawyer_db)
     
-    await db.lawyers.update_one({"id": lawyer_id}, {"$set": update_data})
-    updated_lawyer = await db.lawyers.find_one({"id": lawyer_id})
-    return Lawyer(**updated_lawyer)
+    return Lawyer.from_orm(lawyer_db)
 
 @api_router.delete("/lawyers/{lawyer_id}")
-async def deactivate_lawyer(lawyer_id: str, current_user: User = Depends(get_current_user)):
-    # Only admin can deactivate lawyers
+async def deactivate_lawyer(lawyer_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if current_user.role != UserRole.admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only administrators can deactivate lawyers"
         )
     
-    lawyer = await db.lawyers.find_one({"id": lawyer_id})
-    if lawyer is None:
+    lawyer = db.query(DBLawyer).filter(DBLawyer.id == lawyer_id).first()
+    if not lawyer:
         raise HTTPException(status_code=404, detail="Lawyer not found")
     
-    # Soft delete - just set is_active to False
-    await db.lawyers.update_one(
-        {"id": lawyer_id}, 
-        {"$set": {"is_active": False, "updated_at": datetime.utcnow()}}
-    )
+    lawyer.is_active = False
+    lawyer.updated_at = datetime.utcnow()
+    db.commit()
     
     return {"message": "Lawyer deactivated successfully"}
 
-# Dashboard endpoint
-@api_router.get("/dashboard", response_model=DashboardStats)
-async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
-    # Apply branch filter
-    branch_filter = {}
-    if current_user.branch_id:
-        branch_filter["branch_id"] = current_user.branch_id
-    elif current_user.role != UserRole.admin or current_user.branch_id is not None:
-        # Non-admin or branch-restricted users get empty stats
-        return DashboardStats(
-            total_clients=0, total_processes=0, total_revenue=0, total_expenses=0,
-            pending_payments=0, overdue_payments=0, monthly_revenue=0, monthly_expenses=0
+# Process endpoints
+@api_router.post("/processes", response_model=Process)
+async def create_process(process: ProcessCreate, db: Session = Depends(get_db)):
+    # Verify client exists
+    client = db.query(DBClient).filter(DBClient.id == process.client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Verify lawyer exists if assigned
+    if process.responsible_lawyer_id:
+        lawyer = db.query(DBLawyer).filter(DBLawyer.id == process.responsible_lawyer_id).first()
+        if not lawyer:
+            raise HTTPException(status_code=404, detail="Lawyer not found")
+    
+    process_db = DBProcess(**process.dict())
+    db.add(process_db)
+    db.commit()
+    db.refresh(process_db)
+    
+    return Process.from_orm(process_db)
+
+@api_router.get("/processes", response_model=List[Process])
+async def get_processes(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    accessible_branches = get_accessible_branches(current_user, db)
+    
+    query = db.query(DBProcess)
+    
+    # Branch filtering
+    if accessible_branches:
+        query = query.filter(DBProcess.branch_id.in_(accessible_branches))
+    
+    # Lawyer-specific filtering: lawyers can only see their assigned processes (unless admin)
+    if current_user.role == UserRole.lawyer:
+        lawyer = db.query(DBLawyer).filter(DBLawyer.email == current_user.email).first()
+        if lawyer:
+            query = query.filter(DBProcess.responsible_lawyer_id == lawyer.id)
+    
+    processes = query.all()
+    return [Process.from_orm(process) for process in processes]
+
+@api_router.get("/processes/{process_id}", response_model=Process)
+async def get_process(process_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    process = db.query(DBProcess).filter(DBProcess.id == process_id).first()
+    if not process:
+        raise HTTPException(status_code=404, detail="Process not found")
+    
+    # Check access for lawyers
+    if current_user.role == UserRole.lawyer:
+        lawyer = db.query(DBLawyer).filter(DBLawyer.email == current_user.email).first()
+        if lawyer and process.responsible_lawyer_id != lawyer.id:
+            raise HTTPException(status_code=403, detail="Access denied to this process")
+    
+    return Process.from_orm(process)
+
+@api_router.put("/processes/{process_id}", response_model=Process)
+async def update_process(process_id: str, process_update: ProcessUpdate, db: Session = Depends(get_db)):
+    process_db = db.query(DBProcess).filter(DBProcess.id == process_id).first()
+    if not process_db:
+        raise HTTPException(status_code=404, detail="Process not found")
+    
+    update_data = process_update.dict(exclude_unset=True)
+    
+    for field, value in update_data.items():
+        setattr(process_db, field, value)
+    
+    process_db.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(process_db)
+    
+    return Process.from_orm(process_db)
+
+@api_router.delete("/processes/{process_id}")
+async def delete_process(process_id: str, db: Session = Depends(get_db)):
+    process = db.query(DBProcess).filter(DBProcess.id == process_id).first()
+    if not process:
+        raise HTTPException(status_code=404, detail="Processo não encontrado")
+    
+    # Check dependencies
+    financial_count = db.query(DBFinancialTransaction).filter(DBFinancialTransaction.process_id == process_id).count()
+    if financial_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Não é possível excluir este processo pois ele possui {financial_count} transação(ões) financeira(s) vinculada(s)."
         )
     
-    # Count totals with branch filter
-    total_clients = await db.clients.count_documents(branch_filter)
-    total_processes = await db.processes.count_documents(branch_filter)
+    db.delete(process)
+    db.commit()
     
-    # Calculate financial totals with branch filter
-    revenue_pipeline = [
-        {"$match": {**branch_filter, "type": "receita"}},
-        {"$group": {"_id": None, "total": {"$sum": "$value"}}}
-    ]
-    revenue_result = await db.financial_transactions.aggregate(revenue_pipeline).to_list(1)
-    total_revenue = revenue_result[0]["total"] if revenue_result else 0
+    return {"message": "Processo excluído com sucesso"}
+
+# Financial endpoints
+@api_router.post("/financial", response_model=FinancialTransaction)
+async def create_financial_transaction(transaction: FinancialTransactionCreate, db: Session = Depends(get_db)):
+    transaction_db = DBFinancialTransaction(**transaction.dict())
+    db.add(transaction_db)
+    db.commit()
+    db.refresh(transaction_db)
     
-    expenses_pipeline = [
-        {"$match": {**branch_filter, "type": "despesa"}},
-        {"$group": {"_id": None, "total": {"$sum": "$value"}}}
-    ]
-    expenses_result = await db.financial_transactions.aggregate(expenses_pipeline).to_list(1)
-    total_expenses = expenses_result[0]["total"] if expenses_result else 0
+    return FinancialTransaction.from_orm(transaction_db)
+
+@api_router.get("/financial", response_model=List[FinancialTransaction])
+async def get_financial_transactions(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Check financial access
+    if not check_financial_access(current_user, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso negado aos dados financeiros"
+        )
     
-    # Count pending and overdue payments with branch filter
-    pending_payments = await db.financial_transactions.count_documents({**branch_filter, "status": "pendente"})
-    overdue_payments = await db.financial_transactions.count_documents({**branch_filter, "status": "vencido"})
+    accessible_branches = get_accessible_branches(current_user, db)
     
-    # Calculate monthly revenue and expenses (current month) with branch filter
-    from datetime import datetime, timedelta
-    current_month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    next_month_start = current_month_start + timedelta(days=32)
-    next_month_start = next_month_start.replace(day=1)
+    query = db.query(DBFinancialTransaction)
     
-    monthly_revenue_pipeline = [
-        {"$match": {
-            **branch_filter,
-            "type": "receita",
-            "due_date": {"$gte": current_month_start, "$lt": next_month_start}
-        }},
-        {"$group": {"_id": None, "total": {"$sum": "$value"}}}
-    ]
-    monthly_revenue_result = await db.financial_transactions.aggregate(monthly_revenue_pipeline).to_list(1)
-    monthly_revenue = monthly_revenue_result[0]["total"] if monthly_revenue_result else 0
+    if accessible_branches:
+        query = query.filter(DBFinancialTransaction.branch_id.in_(accessible_branches))
     
-    monthly_expenses_pipeline = [
-        {"$match": {
-            **branch_filter,
-            "type": "despesa",
-            "due_date": {"$gte": current_month_start, "$lt": next_month_start}
-        }},
-        {"$group": {"_id": None, "total": {"$sum": "$value"}}}
-    ]
-    monthly_expenses_result = await db.financial_transactions.aggregate(monthly_expenses_pipeline).to_list(1)
-    monthly_expenses = monthly_expenses_result[0]["total"] if monthly_expenses_result else 0
+    transactions = query.all()
+    return [FinancialTransaction.from_orm(transaction) for transaction in transactions]
+
+@api_router.put("/financial/{transaction_id}", response_model=FinancialTransaction)
+async def update_financial_transaction(
+    transaction_id: str, 
+    transaction_update: FinancialTransactionUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if not check_financial_access(current_user, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso negado aos dados financeiros"
+        )
+    
+    transaction_db = db.query(DBFinancialTransaction).filter(DBFinancialTransaction.id == transaction_id).first()
+    if not transaction_db:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    update_data = transaction_update.dict(exclude_unset=True)
+    
+    for field, value in update_data.items():
+        setattr(transaction_db, field, value)
+    
+    transaction_db.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(transaction_db)
+    
+    return FinancialTransaction.from_orm(transaction_db)
+
+@api_router.delete("/financial/{transaction_id}")
+async def delete_financial_transaction(transaction_id: str, db: Session = Depends(get_db)):
+    transaction = db.query(DBFinancialTransaction).filter(DBFinancialTransaction.id == transaction_id).first()
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transação financeira não encontrada")
+    
+    if transaction.status == TransactionStatus.pago:
+        raise HTTPException(
+            status_code=400,
+            detail="Não é possível excluir uma transação que já foi paga."
+        )
+    
+    db.delete(transaction)
+    db.commit()
+    
+    return {"message": "Transação financeira excluída com sucesso"}
+
+# Contract endpoints
+@api_router.post("/contracts", response_model=Contract)
+async def create_contract(contract: ContractCreate, db: Session = Depends(get_db)):
+    # Verify client exists
+    client = db.query(DBClient).filter(DBClient.id == contract.client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Generate contract number
+    contract_number = get_next_contract_number(contract.branch_id, db)
+    
+    contract_data = contract.dict()
+    contract_data['contract_number'] = contract_number
+    
+    contract_db = DBContract(**contract_data)
+    db.add(contract_db)
+    db.commit()
+    db.refresh(contract_db)
+    
+    return Contract.from_orm(contract_db)
+
+@api_router.get("/contracts", response_model=List[Contract])
+async def get_contracts(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    accessible_branches = get_accessible_branches(current_user, db)
+    
+    query = db.query(DBContract)
+    
+    if accessible_branches:
+        query = query.filter(DBContract.branch_id.in_(accessible_branches))
+    
+    contracts = query.all()
+    return [Contract.from_orm(contract) for contract in contracts]
+
+@api_router.get("/contracts/{contract_id}", response_model=Contract)
+async def get_contract(contract_id: str, db: Session = Depends(get_db)):
+    contract = db.query(DBContract).filter(DBContract.id == contract_id).first()
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    return Contract.from_orm(contract)
+
+# Task endpoints
+@api_router.post("/tasks", response_model=Task)
+async def create_task(task: TaskCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Verify lawyer exists
+    lawyer = db.query(DBLawyer).filter(DBLawyer.id == task.assigned_lawyer_id).first()
+    if not lawyer:
+        raise HTTPException(status_code=404, detail="Lawyer not found")
+    
+    task_db = DBTask(**task.dict())
+    db.add(task_db)
+    db.commit()
+    db.refresh(task_db)
+    
+    return Task.from_orm(task_db)
+
+@api_router.get("/tasks", response_model=List[Task])
+async def get_tasks(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    accessible_branches = get_accessible_branches(current_user, db)
+    
+    query = db.query(DBTask)
+    
+    # Branch filtering
+    if accessible_branches:
+        query = query.filter(DBTask.branch_id.in_(accessible_branches))
+    
+    # Lawyer-specific filtering: lawyers can only see their assigned tasks
+    if current_user.role == UserRole.lawyer:
+        lawyer = db.query(DBLawyer).filter(DBLawyer.email == current_user.email).first()
+        if lawyer:
+            query = query.filter(DBTask.assigned_lawyer_id == lawyer.id)
+    
+    tasks = query.all()
+    return [Task.from_orm(task) for task in tasks]
+
+@api_router.get("/tasks/my-agenda")
+async def get_my_agenda(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get tasks for the current user's agenda"""
+    if current_user.role != UserRole.lawyer:
+        raise HTTPException(status_code=403, detail="Only lawyers can access agenda")
+    
+    lawyer = db.query(DBLawyer).filter(DBLawyer.email == current_user.email).first()
+    if not lawyer:
+        raise HTTPException(status_code=404, detail="Lawyer profile not found")
+    
+    # Get tasks for the next 30 days
+    start_date = datetime.now()
+    end_date = start_date + timedelta(days=30)
+    
+    tasks = db.query(DBTask).filter(
+        DBTask.assigned_lawyer_id == lawyer.id,
+        DBTask.due_date >= start_date,
+        DBTask.due_date <= end_date,
+        DBTask.status != "completed"
+    ).order_by(DBTask.due_date).all()
+    
+    return [Task.from_orm(task) for task in tasks]
+
+@api_router.put("/tasks/{task_id}", response_model=Task)
+async def update_task(task_id: str, task_update: TaskUpdate, db: Session = Depends(get_db)):
+    task_db = db.query(DBTask).filter(DBTask.id == task_id).first()
+    if not task_db:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    update_data = task_update.dict(exclude_unset=True)
+    
+    for field, value in update_data.items():
+        setattr(task_db, field, value)
+    
+    task_db.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(task_db)
+    
+    return Task.from_orm(task_db)
+
+# Dashboard endpoint
+@api_router.get("/dashboard", response_model=DashboardStats)
+async def get_dashboard_stats(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    accessible_branches = get_accessible_branches(current_user, db)
+    
+    # Base filters
+    client_filter = []
+    process_filter = []
+    transaction_filter = []
+    
+    if accessible_branches:
+        client_filter.append(DBClient.branch_id.in_(accessible_branches))
+        process_filter.append(DBProcess.branch_id.in_(accessible_branches))
+        transaction_filter.append(DBFinancialTransaction.branch_id.in_(accessible_branches))
+    
+    # Count totals
+    total_clients = db.query(DBClient).filter(*client_filter).count()
+    total_processes = db.query(DBProcess).filter(*process_filter).count()
+    
+    # Financial data (only if user has access)
+    total_revenue = 0
+    total_expenses = 0
+    pending_payments = 0
+    overdue_payments = 0
+    monthly_revenue = 0
+    monthly_expenses = 0
+    
+    if check_financial_access(current_user, db):
+        # Calculate totals
+        revenue_result = db.query(func.sum(DBFinancialTransaction.value)).filter(
+            DBFinancialTransaction.type == TransactionType.receita,
+            *transaction_filter
+        ).scalar()
+        total_revenue = revenue_result or 0
+        
+        expenses_result = db.query(func.sum(DBFinancialTransaction.value)).filter(
+            DBFinancialTransaction.type == TransactionType.despesa,
+            *transaction_filter
+        ).scalar()
+        total_expenses = expenses_result or 0
+        
+        # Count payments
+        pending_payments = db.query(DBFinancialTransaction).filter(
+            DBFinancialTransaction.status == TransactionStatus.pendente,
+            *transaction_filter
+        ).count()
+        
+        overdue_payments = db.query(DBFinancialTransaction).filter(
+            DBFinancialTransaction.status == TransactionStatus.vencido,
+            *transaction_filter
+        ).count()
+        
+        # Monthly calculations
+        current_month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        next_month_start = current_month_start + timedelta(days=32)
+        next_month_start = next_month_start.replace(day=1)
+        
+        monthly_revenue_result = db.query(func.sum(DBFinancialTransaction.value)).filter(
+            DBFinancialTransaction.type == TransactionType.receita,
+            DBFinancialTransaction.due_date >= current_month_start,
+            DBFinancialTransaction.due_date < next_month_start,
+            *transaction_filter
+        ).scalar()
+        monthly_revenue = monthly_revenue_result or 0
+        
+        monthly_expenses_result = db.query(func.sum(DBFinancialTransaction.value)).filter(
+            DBFinancialTransaction.type == TransactionType.despesa,
+            DBFinancialTransaction.due_date >= current_month_start,
+            DBFinancialTransaction.due_date < next_month_start,
+            *transaction_filter
+        ).scalar()
+        monthly_expenses = monthly_expenses_result or 0
     
     return DashboardStats(
         total_clients=total_clients,
@@ -1026,76 +1114,92 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
         monthly_expenses=monthly_expenses
     )
 
-# WhatsApp API Routes
-@api_router.post("/whatsapp/send-reminder/{transaction_id}")
-async def send_manual_reminder(transaction_id: str, current_user: User = Depends(get_current_user)):
-    """
-    Envia lembrete manual de pagamento via WhatsApp
-    """
-    if current_user.role not in ['admin', 'lawyer']:
-        raise HTTPException(status_code=403, detail="Acesso negado")
+# Create tables on startup
+@app.on_event("startup")
+async def startup_event():
+    create_tables()
     
-    result = await payment_reminder_service.send_manual_reminder(transaction_id)
-    
-    if result["success"]:
-        return {"message": "Lembrete enviado com sucesso", "data": result}
-    else:
-        raise HTTPException(status_code=400, detail=result.get("error", "Erro ao enviar lembrete"))
-
-@api_router.post("/whatsapp/check-payments")
-async def trigger_payment_check(current_user: User = Depends(get_current_user)):
-    """
-    Dispara verificação manual de pagamentos pendentes
-    """
-    if current_user.role not in ['admin']:
-        raise HTTPException(status_code=403, detail="Apenas administradores podem disparar verificações")
+    # Create session for setup
+    db = SessionLocal()
     
     try:
-        await payment_reminder_service.check_and_send_reminders()
-        return {"message": "Verificação de pagamentos executada com sucesso"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro na verificação: {str(e)}")
-
-@api_router.get("/whatsapp/status")
-async def get_whatsapp_status(current_user: User = Depends(get_current_user)):
-    """
-    Retorna status do serviço WhatsApp e jobs agendados
-    """
-    if current_user.role not in ['admin', 'lawyer']:
-        raise HTTPException(status_code=403, detail="Acesso negado")
-    
-    jobs = payment_scheduler.get_jobs_status()
-    
-    return {
-        "whatsapp_enabled": whatsapp_service.is_enabled,
-        "scheduler_running": payment_scheduler.scheduler.running,
-        "jobs": jobs,
-        "next_check": jobs[0]["next_run"] if jobs else None
-    }
-
-@api_router.post("/whatsapp/send-message")
-async def send_whatsapp_message(
-    message_data: dict,
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Envia mensagem personalizada via WhatsApp
-    """
-    if current_user.role not in ['admin', 'lawyer']:
-        raise HTTPException(status_code=403, detail="Acesso negado")
-    
-    phone_number = message_data.get("phone_number")
-    message = message_data.get("message")
-    
-    if not phone_number or not message:
-        raise HTTPException(status_code=400, detail="phone_number e message são obrigatórios")
-    
-    result = await whatsapp_service.send_message(phone_number, message)
-    
-    if result["success"]:
-        return {"message": "Mensagem enviada com sucesso", "data": result}
-    else:
-        raise HTTPException(status_code=400, detail=result.get("error", "Erro ao enviar mensagem"))
+        # Create default branches if they don't exist
+        existing_branches = db.query(DBBranch).count()
+        if existing_branches == 0:
+            # Create default branches
+            filial_caxias = DBBranch(
+                name="GB Advocacia & N. Comin - Caxias do Sul",
+                cnpj="12.345.678/0001-90",
+                address="Rua Os Dezoito do Forte, 1234 - Centro, Caxias do Sul - RS",
+                phone="(54) 3456-7890",
+                email="caxias@gbadvocacia.com",
+                responsible="Dr. Gustavo Batista"
+            )
+            
+            filial_nova_prata = DBBranch(
+                name="GB Advocacia & N. Comin - Nova Prata",
+                cnpj="12.345.678/0002-01",
+                address="Rua General Osório, 567 - Centro, Nova Prata - RS",
+                phone="(54) 3242-1234",
+                email="novaprata@gbadvocacia.com",
+                responsible="Dra. Natália Comin"
+            )
+            
+            db.add(filial_caxias)
+            db.add(filial_nova_prata)
+            db.commit()
+            
+            logging.info("Default branches created: Caxias do Sul and Nova Prata")
+            
+            # Create admin users for each branch
+            admin_caxias = DBUser(
+                username="admin_caxias",
+                email="admin.caxias@gbadvocacia.com",
+                full_name="Administrador Caxias do Sul",
+                role=UserRole.admin,
+                branch_id=filial_caxias.id,
+                hashed_password=get_password_hash("admin123"),
+                is_active=True
+            )
+            
+            admin_nova_prata = DBUser(
+                username="admin_novaprata",
+                email="admin.novaprata@gbadvocacia.com",
+                full_name="Administrador Nova Prata",
+                role=UserRole.admin,
+                branch_id=filial_nova_prata.id,
+                hashed_password=get_password_hash("admin123"),
+                is_active=True
+            )
+            
+            db.add(admin_caxias)
+            db.add(admin_nova_prata)
+            db.commit()
+            
+            logging.info("Branch administrators created")
+        
+        # Create super admin if it doesn't exist
+        existing_super_admin = db.query(DBUser).filter(
+            DBUser.username == "admin",
+            DBUser.branch_id.is_(None)
+        ).first()
+        
+        if not existing_super_admin:
+            super_admin_user = DBUser(
+                username="admin",
+                email="admin@gbadvocacia.com",
+                full_name="Super Administrador GB Advocacia",
+                role=UserRole.admin,
+                branch_id=None,
+                hashed_password=get_password_hash("admin123"),
+                is_active=True
+            )
+            db.add(super_admin_user)
+            db.commit()
+            logging.info("Super admin user created: username=admin, password=admin123")
+            
+    finally:
+        db.close()
 
 # Include the router in the main app
 app.include_router(api_router)
@@ -1114,79 +1218,3 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-@app.on_event("startup")
-async def startup_event():
-    # Create default branches if they don't exist
-    existing_branches = await db.branches.count_documents({})
-    if existing_branches == 0:
-        # Create default branches
-        filial_caxias = Branch(
-            name="GB Advocacia & N. Comin - Caxias do Sul",
-            cnpj="12.345.678/0001-90",
-            address="Rua Os Dezoito do Forte, 1234 - Centro, Caxias do Sul - RS",
-            phone="(54) 3456-7890",
-            email="caxias@gbadvocacia.com",
-            responsible="Dr. Gustavo Batista"
-        )
-        
-        filial_nova_prata = Branch(
-            name="GB Advocacia & N. Comin - Nova Prata",
-            cnpj="12.345.678/0002-01",
-            address="Rua General Osório, 567 - Centro, Nova Prata - RS",
-            phone="(54) 3242-1234",
-            email="novaprata@gbadvocacia.com",
-            responsible="Dra. Natália Comin"
-        )
-        
-        await db.branches.insert_one(filial_caxias.dict())
-        await db.branches.insert_one(filial_nova_prata.dict())
-        
-        logger.info("Default branches created: Caxias do Sul and Nova Prata")
-        
-        # Create admin users for each branch
-        admin_caxias = UserInDB(
-            username="admin_caxias",
-            email="admin.caxias@gbadvocacia.com",
-            full_name="Administrador Caxias do Sul",
-            role=UserRole.admin,
-            branch_id=filial_caxias.id,
-            hashed_password=get_password_hash("admin123"),
-            is_active=True
-        )
-        
-        admin_nova_prata = UserInDB(
-            username="admin_novaprata",
-            email="admin.novaprata@gbadvocacia.com",
-            full_name="Administrador Nova Prata",
-            role=UserRole.admin,
-            branch_id=filial_nova_prata.id,
-            hashed_password=get_password_hash("admin123"),
-            is_active=True
-        )
-        
-        await db.users.insert_one(admin_caxias.dict())
-        await db.users.insert_one(admin_nova_prata.dict())
-        
-        logger.info("Branch administrators created:")
-        logger.info("Caxias Admin: username=admin_caxias, password=admin123")
-        logger.info("Nova Prata Admin: username=admin_novaprata, password=admin123")
-    
-    # Create super admin (without branch) if it doesn't exist
-    existing_super_admin = await db.users.find_one({"username": "admin", "branch_id": None})
-    if not existing_super_admin:
-        super_admin_user = UserInDB(
-            username="admin",
-            email="admin@gbadvocacia.com",
-            full_name="Super Administrador GB Advocacia",
-            role=UserRole.admin,
-            branch_id=None,  # Super admin has no branch restriction
-            hashed_password=get_password_hash("admin123"),
-            is_active=True
-        )
-        await db.users.insert_one(super_admin_user.dict())
-        logger.info("Super admin user created: username=admin, password=admin123")
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
