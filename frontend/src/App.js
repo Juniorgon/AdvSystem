@@ -1488,21 +1488,6 @@ function App() {
             </div>
           </div>
         )}
-                <span className="text-gray-300 font-medium">Margem de Lucro:</span>
-                <span className={`text-xl font-bold ${
-                  (dashboardStats.total_revenue || 0) > 0
-                    ? 'text-purple-400'
-                    : 'text-gray-400'
-                }`}>
-                  {(dashboardStats.total_revenue || 0) > 0 
-                    ? `${(((dashboardStats.total_revenue - dashboardStats.total_expenses) / dashboardStats.total_revenue) * 100).toFixed(1)}%`
-                    : '0%'
-                  }
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     );
   };
