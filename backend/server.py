@@ -1047,6 +1047,185 @@ async def update_task(task_id: str, task_update: TaskUpdate, db: Session = Depen
     
     return Task.from_orm(task_db)
 
+# Google Drive endpoints
+@api_router.get("/google-drive/status")
+async def get_google_drive_status(current_user: User = Depends(get_current_user)):
+    """Check Google Drive integration status"""
+    if current_user.role != UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can check Google Drive status"
+        )
+    
+    is_configured = google_drive_service.is_configured()
+    
+    return {
+        "configured": is_configured,
+        "message": "Google Drive is configured and ready" if is_configured else "Google Drive needs to be configured"
+    }
+
+@api_router.get("/google-drive/auth-url")
+async def get_google_drive_auth_url(current_user: User = Depends(get_current_user)):
+    """Get Google Drive OAuth authorization URL"""
+    if current_user.role != UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can configure Google Drive"
+        )
+    
+    auth_url = google_drive_service.get_authorization_url()
+    
+    if not auth_url:
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to generate authorization URL. Check Google credentials file."
+        )
+    
+    return {"authorization_url": auth_url}
+
+@api_router.post("/google-drive/authorize")
+async def authorize_google_drive(
+    auth_request: GoogleDriveAuthRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Complete Google Drive OAuth authorization"""
+    if current_user.role != UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can configure Google Drive"
+        )
+    
+    success = google_drive_service.exchange_code_for_token(auth_request.authorization_code)
+    
+    if not success:
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to authorize Google Drive access"
+        )
+    
+    return {"message": "Google Drive successfully configured"}
+
+@api_router.post("/google-drive/generate-procuracao")
+async def generate_procuracao(
+    request: ProcuracaoRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Generate power of attorney document and save to Google Drive"""
+    
+    # Get client data
+    client = db.query(DBClient).filter(DBClient.id == request.client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Check access permissions
+    accessible_branches = get_accessible_branches(current_user, db)
+    if accessible_branches and client.branch_id not in accessible_branches:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this client"
+        )
+    
+    # Get process data if provided
+    process_data = None
+    if request.process_id:
+        process = db.query(DBProcess).filter(DBProcess.id == request.process_id).first()
+        if not process:
+            raise HTTPException(status_code=404, detail="Process not found")
+        
+        if accessible_branches and process.branch_id not in accessible_branches:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied to this process"
+            )
+        
+        process_data = {
+            'process_number': process.process_number,
+            'type': process.type,
+            'description': process.description
+        }
+    
+    # Prepare client data for document generation
+    client_data = {
+        'name': client.name,
+        'nationality': client.nationality,
+        'civil_status': client.civil_status,
+        'profession': client.profession,
+        'cpf': client.cpf,
+        'street': client.street,
+        'number': client.number,
+        'city': client.city,
+        'district': client.district,
+        'state': client.state,
+        'complement': client.complement or ''
+    }
+    
+    # Generate and save document
+    try:
+        drive_link = google_drive_service.generate_and_save_procuracao(client_data, process_data)
+        
+        if not drive_link:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to generate or save document. Check Google Drive configuration."
+            )
+        
+        return {
+            "message": "Procuração generated successfully",
+            "drive_link": drive_link,
+            "client_name": client.name,
+            "process_number": process_data.get('process_number') if process_data else None
+        }
+        
+    except Exception as e:
+        logger.error(f"Error generating procuração: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generating document: {str(e)}"
+        )
+
+@api_router.get("/google-drive/client-documents/{client_id}")
+async def get_client_documents(
+    client_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> List[DocumentInfo]:
+    """Get list of documents for a client from Google Drive"""
+    
+    # Get client data
+    client = db.query(DBClient).filter(DBClient.id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Check access permissions
+    accessible_branches = get_accessible_branches(current_user, db)
+    if accessible_branches and client.branch_id not in accessible_branches:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this client"
+        )
+    
+    try:
+        documents = google_drive_service.list_client_documents(client.name)
+        
+        return [
+            DocumentInfo(
+                id=doc['id'],
+                name=doc['name'],
+                created_time=doc['createdTime'],
+                web_view_link=doc['webViewLink'],
+                mime_type=doc['mimeType']
+            )
+            for doc in documents
+        ]
+        
+    except Exception as e:
+        logger.error(f"Error listing client documents: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Error retrieving client documents"
+        )
+
 # Dashboard endpoint
 @api_router.get("/dashboard", response_model=DashboardStats)
 async def get_dashboard_stats(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
