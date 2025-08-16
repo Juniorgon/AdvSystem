@@ -4101,7 +4101,9 @@ Testemunhas:
           oab_state: 'SP',
           email: '',
           phone: '',
-          specialization: ''
+          specialization: '',
+          access_financial_data: true,
+          allowed_branch_ids: []
         });
         setEditingLawyer(null);
         await fetchLawyers();
