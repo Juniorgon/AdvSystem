@@ -4123,7 +4123,9 @@ Testemunhas:
         oab_state: lawyer.oab_state,
         email: lawyer.email,
         phone: lawyer.phone,
-        specialization: lawyer.specialization
+        specialization: lawyer.specialization || '',
+        access_financial_data: lawyer.access_financial_data !== undefined ? lawyer.access_financial_data : true,
+        allowed_branch_ids: lawyer.allowed_branch_ids ? JSON.parse(lawyer.allowed_branch_ids) : []
       });
       setShowForm(true);
     };
