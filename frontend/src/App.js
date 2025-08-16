@@ -1950,7 +1950,7 @@ Testemunhas:
                     <label className="block text-gray-300 text-sm font-medium mb-1">Estado</label>
                     <input
                       type="text"
-                      value={formData.address.state}
+                      value={formData.state}
                       onChange={(e) => handleAddressChange('state', e.target.value)}
                       className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
                       required
@@ -1960,7 +1960,7 @@ Testemunhas:
                     <label className="block text-gray-300 text-sm font-medium mb-1">Complemento</label>
                     <input
                       type="text"
-                      value={formData.address.complement}
+                      value={formData.complement}
                       onChange={(e) => handleAddressChange('complement', e.target.value)}
                       className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
