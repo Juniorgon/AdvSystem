@@ -135,7 +135,8 @@ class BackendTester:
         }
         
         try:
-            response = self.session.post(f"{API_BASE_URL}/clients", json=corporate_client_data)
+            headers = {'Authorization': f'Bearer {self.auth_tokens.get("super_admin")}'} if 'super_admin' in self.auth_tokens else {}
+            response = self.session.post(f"{API_BASE_URL}/clients", json=corporate_client_data, headers=headers)
             if response.status_code == 200:
                 client = response.json()
                 self.created_entities['clients'].append(client['id'])
