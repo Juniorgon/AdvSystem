@@ -7,10 +7,10 @@ import os
 from enum import Enum
 
 # Database URL
-DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://advocacia_user:advocacia_pass@localhost/gb_advocacia_db')
+DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///./gb_advocacia.db')
 
 # Create engine
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if 'sqlite' in DATABASE_URL else {})
 
 # Create session
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
