@@ -74,7 +74,7 @@ class User(Base):
     full_name = Column(String, nullable=False)
     hashed_password = Column(String, nullable=False)
     role = Column(SQLEnum(UserRole), nullable=False)
-    branch_id = Column(String, ForeignKey("branches.id"), nullable=True)
+    branch_id = Column(UUID(as_uuid=True), ForeignKey("branches.id"), nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
