@@ -187,7 +187,7 @@ class FinancialTransaction(Base):
 class Contract(Base):
     __tablename__ = "contracts"
     
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     
     # Sequential contract numbering
     contract_number = Column(String, unique=True, nullable=False)
