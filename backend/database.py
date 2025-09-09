@@ -209,7 +209,7 @@ class Contract(Base):
 class Task(Base):
     __tablename__ = "tasks"
     
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     due_date = Column(DateTime, nullable=False)
