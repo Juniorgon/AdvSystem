@@ -140,7 +140,7 @@ class Process(Base):
     __tablename__ = "processes"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    client_id = Column(String, ForeignKey("clients.id"), nullable=False)
+    client_id = Column(UUID(as_uuid=True), ForeignKey("clients.id"), nullable=False)
     process_number = Column(String, nullable=False)
     type = Column(String, nullable=False)
     status = Column(String, nullable=False)
