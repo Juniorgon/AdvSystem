@@ -192,7 +192,7 @@ class Contract(Base):
     # Sequential contract numbering
     contract_number = Column(String, unique=True, nullable=False)
     
-    client_id = Column(String, ForeignKey("clients.id"), nullable=False)
+    client_id = Column(UUID(as_uuid=True), ForeignKey("clients.id"), nullable=False)
     process_id = Column(String, ForeignKey("processes.id"), nullable=True)
     value = Column(Float, nullable=False)
     payment_conditions = Column(String, nullable=False)
