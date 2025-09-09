@@ -348,3 +348,26 @@ tr:hover {
     color: black !important;
   }
 }
+
+/* Watermark removal/subtle styling */
+[class*="watermark"],
+[id*="watermark"],
+div[style*="position: fixed"][style*="bottom"],
+div[style*="position: absolute"][style*="bottom"],
+.powered-by,
+.emergent-watermark {
+  opacity: 0.02 !important;
+  font-size: 8px !important;
+  color: transparent !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+  visibility: hidden !important;
+}
+
+/* Hide specific watermark patterns */
+div:contains("Powered by"),
+div:contains("Emergent"),
+div:contains("emergent.ai") {
+  opacity: 0.02 !important;
+  visibility: hidden !important;
+}
