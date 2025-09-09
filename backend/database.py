@@ -46,7 +46,7 @@ class UserRole(str, Enum):
 class Branch(Base):
     __tablename__ = "branches"
     
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False)
     cnpj = Column(String, unique=True, nullable=False)
     address = Column(String, nullable=False)
