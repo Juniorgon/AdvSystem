@@ -85,7 +85,7 @@ class User(Base):
 class Client(Base):
     __tablename__ = "clients"
     
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False)
     nationality = Column(String, nullable=False)
     civil_status = Column(String, nullable=False)
