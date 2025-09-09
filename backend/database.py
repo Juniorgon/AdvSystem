@@ -102,7 +102,7 @@ class Client(Base):
     
     phone = Column(String, nullable=False)
     client_type = Column(SQLEnum(ClientType), nullable=False)
-    branch_id = Column(String, ForeignKey("branches.id"), nullable=False)
+    branch_id = Column(UUID(as_uuid=True), ForeignKey("branches.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -122,7 +122,7 @@ class Lawyer(Base):
     email = Column(String, unique=True, nullable=False)
     phone = Column(String, nullable=False)
     specialization = Column(String, nullable=True)
-    branch_id = Column(String, ForeignKey("branches.id"), nullable=False)
+    branch_id = Column(UUID(as_uuid=True), ForeignKey("branches.id"), nullable=False)
     
     # New fields for enhanced permissions
     access_financial_data = Column(Boolean, default=True)  # Controls access to financial information
@@ -147,10 +147,10 @@ class Process(Base):
     value = Column(Float, nullable=False)
     description = Column(Text, nullable=False)
     role = Column(SQLEnum(ProcessRole), nullable=False)
-    branch_id = Column(String, ForeignKey("branches.id"), nullable=False)
+    branch_id = Column(UUID(as_uuid=True), ForeignKey("branches.id"), nullable=False)
     
     # New field for lawyer assignment
-    responsible_lawyer_id = Column(String, ForeignKey("lawyers.id"), nullable=True)
+    responsible_lawyer_id = Column(UUID(as_uuid=True), ForeignKey("lawyers.id"), nullable=True)
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -166,8 +166,8 @@ class FinancialTransaction(Base):
     __tablename__ = "financial_transactions"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    client_id = Column(String, ForeignKey("clients.id"), nullable=True)
-    process_id = Column(String, ForeignKey("processes.id"), nullable=True)
+    client_id = Column(UUID(as_uuid=True), ForeignKey("clients.id"), nullable=True)
+    process_id = Column(UUID(as_uuid=True), ForeignKey("processes.id"), nullable=True)
     type = Column(SQLEnum(TransactionType), nullable=False)
     description = Column(String, nullable=False)
     value = Column(Float, nullable=False)
@@ -175,7 +175,7 @@ class FinancialTransaction(Base):
     payment_date = Column(DateTime, nullable=True)
     status = Column(SQLEnum(TransactionStatus), nullable=False)
     category = Column(String, nullable=False)
-    branch_id = Column(String, ForeignKey("branches.id"), nullable=False)
+    branch_id = Column(UUID(as_uuid=True), ForeignKey("branches.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -193,11 +193,11 @@ class Contract(Base):
     contract_number = Column(String, unique=True, nullable=False)
     
     client_id = Column(UUID(as_uuid=True), ForeignKey("clients.id"), nullable=False)
-    process_id = Column(String, ForeignKey("processes.id"), nullable=True)
+    process_id = Column(UUID(as_uuid=True), ForeignKey("processes.id"), nullable=True)
     value = Column(Float, nullable=False)
     payment_conditions = Column(String, nullable=False)
     installments = Column(Integer, nullable=False)
-    branch_id = Column(String, ForeignKey("branches.id"), nullable=False)
+    branch_id = Column(UUID(as_uuid=True), ForeignKey("branches.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -215,10 +215,10 @@ class Task(Base):
     due_date = Column(DateTime, nullable=False)
     priority = Column(String, default="medium")  # low, medium, high
     status = Column(String, default="pending")  # pending, in_progress, completed
-    assigned_lawyer_id = Column(String, ForeignKey("lawyers.id"), nullable=False)
-    client_id = Column(String, ForeignKey("clients.id"), nullable=True)
-    process_id = Column(String, ForeignKey("processes.id"), nullable=True)
-    branch_id = Column(String, ForeignKey("branches.id"), nullable=False)
+    assigned_lawyer_id = Column(UUID(as_uuid=True), ForeignKey("lawyers.id"), nullable=False)
+    client_id = Column(UUID(as_uuid=True), ForeignKey("clients.id"), nullable=True)
+    process_id = Column(UUID(as_uuid=True), ForeignKey("processes.id"), nullable=True)
+    branch_id = Column(UUID(as_uuid=True), ForeignKey("branches.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -228,7 +228,7 @@ class ContractNumberSequence(Base):
     id = Column(Integer, primary_key=True)
     last_number = Column(Integer, default=0)
     year = Column(Integer, nullable=False)
-    branch_id = Column(String, ForeignKey("branches.id"), nullable=False)
+    branch_id = Column(UUID(as_uuid=True), ForeignKey("branches.id"), nullable=False)
 
 # Dependency to get database session
 def get_db() -> Session:
