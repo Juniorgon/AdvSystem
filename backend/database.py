@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine, Column, String, Boolean, Float, DateTime, Integer, Text, ForeignKey, Enum as SQLEnum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
+from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from datetime import datetime
 import os
