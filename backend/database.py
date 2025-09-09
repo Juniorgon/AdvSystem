@@ -115,7 +115,7 @@ class Client(Base):
 class Lawyer(Base):
     __tablename__ = "lawyers"
     
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     full_name = Column(String, nullable=False)
     oab_number = Column(String, nullable=False)
     oab_state = Column(String, nullable=False)
