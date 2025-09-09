@@ -139,7 +139,7 @@ class Lawyer(Base):
 class Process(Base):
     __tablename__ = "processes"
     
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     client_id = Column(String, ForeignKey("clients.id"), nullable=False)
     process_number = Column(String, nullable=False)
     type = Column(String, nullable=False)
