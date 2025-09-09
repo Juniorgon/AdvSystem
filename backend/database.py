@@ -165,7 +165,7 @@ class Process(Base):
 class FinancialTransaction(Base):
     __tablename__ = "financial_transactions"
     
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     client_id = Column(String, ForeignKey("clients.id"), nullable=True)
     process_id = Column(String, ForeignKey("processes.id"), nullable=True)
     type = Column(SQLEnum(TransactionType), nullable=False)
