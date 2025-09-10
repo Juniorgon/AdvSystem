@@ -266,7 +266,7 @@ class Process(BaseModel):
         from_attributes = True
 
 class ProcessCreate(BaseModel):
-    client_id: str
+    client_id: Optional[str] = None
     process_number: str
     type: str
     status: str
