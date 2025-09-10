@@ -372,7 +372,7 @@ class TaskCreate(BaseModel):
     assigned_lawyer_id: str
     client_id: Optional[str] = None
     process_id: Optional[str] = None
-    branch_id: str
+    branch_id: Optional[str] = None
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
