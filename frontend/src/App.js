@@ -1934,7 +1934,10 @@ function App() {
         
         // Get current branch ID
         const branchId = getCurrentBranchId();
-        if (!branchId) {
+        // Super admin can create clients without branch restriction
+        if (user?.role === 'admin' && !user?.branch_id && !branchId) {
+          toast.warning('Cliente será criado sem filial específica.');
+        } else if (!branchId) {
           toast.error('Selecione uma filial antes de criar o cliente.');
           return;
         }
