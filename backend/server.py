@@ -369,7 +369,7 @@ class TaskCreate(BaseModel):
     due_date: datetime
     priority: str = "medium"
     status: str = "pending"
-    assigned_lawyer_id: str
+    assigned_lawyer_id: Optional[str] = None
     client_id: Optional[str] = None
     process_id: Optional[str] = None
     branch_id: Optional[str] = None
