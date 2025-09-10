@@ -313,7 +313,7 @@ class FinancialTransactionCreate(BaseModel):
     payment_date: Optional[datetime] = None
     status: TransactionStatus = TransactionStatus.pendente
     category: str
-    branch_id: str
+    branch_id: Optional[str] = None
 
 class FinancialTransactionUpdate(BaseModel):
     description: Optional[str] = None
