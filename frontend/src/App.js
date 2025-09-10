@@ -3273,7 +3273,7 @@ Testemunhas:
   // Financial Component with Enhanced Access Control
   const Financial = () => {
     // Check if user has financial access permission
-    if (!userPermissions?.canAccessFinancialData) {
+    if (!hasFinancialAccess()) {
       return (
         <div className="p-6">
           <div className="bg-red-900 bg-opacity-30 border border-red-600 rounded-lg p-8 text-center">
