@@ -273,7 +273,7 @@ class ProcessCreate(BaseModel):
     value: float
     description: str
     role: ProcessRole
-    branch_id: str
+    branch_id: Optional[str] = None
     responsible_lawyer_id: Optional[str] = None
 
 class ProcessUpdate(BaseModel):
