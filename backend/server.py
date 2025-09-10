@@ -339,7 +339,7 @@ class Contract(BaseModel):
         from_attributes = True
 
 class ContractCreate(BaseModel):
-    client_id: str
+    client_id: Optional[str] = None
     process_id: Optional[str] = None
     value: float
     payment_conditions: str
