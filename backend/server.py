@@ -170,7 +170,7 @@ class BranchCreate(BaseModel):
     email: str
     responsible: str
 
-class Client(BaseModel):
+class Client(UUIDBaseModel):
     id: str
     name: str
     nationality: str
@@ -188,9 +188,6 @@ class Client(BaseModel):
     branch_id: str
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 class ClientCreate(BaseModel):
     name: str
