@@ -234,7 +234,7 @@ class LawyerCreate(BaseModel):
     email: str
     phone: str
     specialization: Optional[str] = ""
-    branch_id: str
+    branch_id: Optional[str] = None
     access_financial_data: bool = True
     allowed_branch_ids: Optional[List[str]] = None
 
