@@ -198,7 +198,7 @@ class ClientCreate(BaseModel):
     address: Address
     phone: str
     client_type: ClientType
-    branch_id: str
+    branch_id: Optional[str] = None
 
 class ClientUpdate(BaseModel):
     name: Optional[str] = None
