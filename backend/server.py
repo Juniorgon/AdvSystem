@@ -344,7 +344,7 @@ class ContractCreate(BaseModel):
     value: float
     payment_conditions: str
     installments: int
-    branch_id: str
+    branch_id: Optional[str] = None
 
 class Task(BaseModel):
     id: str
