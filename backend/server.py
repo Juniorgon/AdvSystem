@@ -18,6 +18,23 @@ import json
 from sqlalchemy.orm import Session
 from sqlalchemy import func, extract, and_, or_
 
+# Base class for models that need UUID conversion
+class UUIDBaseModel(BaseModel):
+    class Config:
+        from_attributes = True
+    
+    @classmethod
+    def from_orm(cls, obj):
+        # Convert UUID objects to strings
+        data = {}
+        for field_name, field_info in cls.model_fields.items():
+            value = getattr(obj, field_name, None)
+            if value is not None and isinstance(value, uuid.UUID):
+                data[field_name] = str(value)
+            else:
+                data[field_name] = value
+        return cls(**data)
+
 # Import database models and connection
 from database import (
     get_db, create_tables, drop_tables, SessionLocal,
