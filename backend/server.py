@@ -151,7 +151,7 @@ class Token(BaseModel):
     token_type: str
     user: User
 
-class Branch(BaseModel):
+class Branch(UUIDBaseModel):
     id: str
     name: str
     cnpj: str
@@ -161,9 +161,6 @@ class Branch(BaseModel):
     responsible: str
     is_active: bool = True
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 class BranchCreate(BaseModel):
     name: str
