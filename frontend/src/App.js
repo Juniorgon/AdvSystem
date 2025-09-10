@@ -230,9 +230,14 @@ function App() {
 
   // Helper function to validate branch selection
   const validateBranchSelection = () => {
+    // Super admins can work without branch selection
+    if (user?.role === 'admin' && !user?.branch_id) {
+      return true; // Allow super admin to proceed without branch
+    }
+    
     if (!user?.branch_id && !selectedBranch) {
-      toast.error('Por favor, selecione uma filial antes de criar registros.');
-      return false;
+      toast.warning('Recomendado: Selecione uma filial para melhor organização dos dados.');
+      return true; // Allow to proceed with warning only
     }
     return true;
   };
