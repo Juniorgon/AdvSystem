@@ -833,8 +833,25 @@ async def get_branches(current_user: User = Depends(get_current_user), db: Sessi
 # Client endpoints
 @api_router.post("/clients", response_model=Client)
 async def create_client(client: ClientCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Set branch_id if not provided
+    branch_id = client.branch_id
+    if not branch_id:
+        # Use user's branch_id or get first available branch
+        if current_user.branch_id:
+            branch_id = current_user.branch_id
+        else:
+            # Get first available branch for super admins
+            first_branch = db.query(DBBranch).first()
+            if first_branch:
+                branch_id = first_branch.id
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Nenhuma filial disponível. Configure uma filial primeiro."
+                )
+    
     # Validate branch access
-    if not validate_branch_access(current_user, client.branch_id, db):
+    if not validate_branch_access(current_user, branch_id, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Acesso negado: Você não tem permissão para criar clientes nesta filial"
@@ -844,6 +861,8 @@ async def create_client(client: ClientCreate, current_user: User = Depends(get_c
     # Extract address
     address = client_data.pop('address')
     client_data.update(address)
+    # Set the branch_id
+    client_data['branch_id'] = branch_id
     
     client_db = DBClient(**client_data)
     db.add(client_db)
