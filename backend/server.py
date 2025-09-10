@@ -210,7 +210,7 @@ class ClientUpdate(BaseModel):
     phone: Optional[str] = None
     client_type: Optional[ClientType] = None
 
-class Lawyer(BaseModel):
+class Lawyer(UUIDBaseModel):
     id: str
     full_name: str
     oab_number: str
@@ -223,9 +223,6 @@ class Lawyer(BaseModel):
     allowed_branch_ids: Optional[str] = None
     is_active: bool = True
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 class LawyerCreate(BaseModel):
     full_name: str
