@@ -119,6 +119,18 @@ class User(BaseModel):
 
     class Config:
         from_attributes = True
+    
+    @classmethod
+    def from_orm(cls, obj):
+        # Convert UUID objects to strings
+        data = {}
+        for field_name, field_info in cls.model_fields.items():
+            value = getattr(obj, field_name, None)
+            if value is not None and isinstance(value, uuid.UUID):
+                data[field_name] = str(value)
+            else:
+                data[field_name] = value
+        return cls(**data)
 
 class UserCreate(BaseModel):
     username: str
