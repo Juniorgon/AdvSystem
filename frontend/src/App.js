@@ -4652,7 +4652,11 @@ Testemunhas:
         
         // Get current branch ID
         const branchId = getCurrentBranchId();
-        if (!branchId) {
+        
+        // Super admin can create lawyers without branch restriction  
+        if (user?.role === 'admin' && !user?.branch_id && !selectedBranch) {
+          toast.warning('Advogado será criado sem filial específica.');
+        } else if (!branchId) {
           toast.error('Selecione uma filial antes de criar o advogado.');
           return;
         }
