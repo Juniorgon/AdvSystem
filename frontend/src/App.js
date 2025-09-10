@@ -2309,24 +2309,6 @@ Testemunhas:
           </div>
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => {
-                if (!validateBranchSelection()) return;
-                createSampleProcesses();
-              }}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm"
-            >
-              Criar Processos de Teste
-            </button>
-            <button
-              onClick={() => {
-                if (!validateBranchSelection()) return;
-                createSampleFinancialData();
-              }}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors text-sm"
-            >
-              Criar Dados Financeiros
-            </button>
-            <button
               onClick={() => exportToPDF(clients, 'Relatório de Clientes', 'clientes-gb-advocacia.pdf')}
               className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg transition-colors text-sm flex items-center space-x-1"
             >
