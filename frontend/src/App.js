@@ -3272,8 +3272,19 @@ Testemunhas:
 
   // Financial Component with Enhanced Access Control
   const Financial = () => {
-    // Check if user has financial access permission
-    if (!hasFinancialAccess()) {
+    // Check if user has financial access permission  
+    const userHasFinancialAccess = () => {
+      if (user?.role === 'admin') return true;
+      
+      if (user?.role === 'lawyer') {
+        const lawyer = lawyers.find(l => l.email === user.email);
+        return lawyer?.access_financial_data !== false;
+      }
+      
+      return false;
+    };
+
+    if (!userHasFinancialAccess()) {
       return (
         <div className="p-6">
           <div className="bg-red-900 bg-opacity-30 border border-red-600 rounded-lg p-8 text-center">
