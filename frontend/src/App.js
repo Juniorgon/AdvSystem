@@ -5099,7 +5099,10 @@ Testemunhas:
         setLoading(true);
         
         const branchId = getCurrentBranchId();
-        if (!branchId) {
+        // Super admin can create tasks without branch restriction
+        if (user?.role === 'admin' && !user?.branch_id && !branchId) {
+          toast.warning('Tarefa será criada sem filial específica.');
+        } else if (!branchId) {
           toast.error('Selecione uma filial antes de criar a tarefa.');
           return;
         }
